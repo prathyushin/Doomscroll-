@@ -25,7 +25,7 @@ class SecureTokenStore(context: Context) {
         val ks = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
         if (!ks.containsAlias(alias)) {
             KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore").apply {
-                init(KeyGenParameterSpec.Builder(alias, KeyGenParameterSpec.PURPOSE_ENCRYPT or KeyGenParameterSpec.PURPOSE_DECRYPT)
+                init(KeyGenParameterSpec.Builder(alias, KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
                     .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
                     .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
                     .setUserAuthenticationRequired(false)
