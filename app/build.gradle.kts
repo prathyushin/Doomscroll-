@@ -14,15 +14,17 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "1.0.0"
+
+        buildConfigField("String", "INSTAGRAM_CLIENT_ID", ""${project.findProperty("INSTAGRAM_CLIENT_ID") ?: ""}"")
+        buildConfigField("String", "THREADS_CLIENT_ID", ""${project.findProperty("THREADS_CLIENT_ID") ?: ""}"")
     }
+
+    buildFeatures { buildConfig = true }
 
     buildTypes {
         release {
             isMinifyEnabled = false
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
 
@@ -30,15 +32,13 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-
-    kotlinOptions {
-        jvmTarget = "17"
-    }
+    kotlinOptions { jvmTarget = "17" }
 }
 
 dependencies {
     implementation(platform("androidx.compose:compose-bom:2024.12.01"))
     implementation("androidx.activity:activity-compose:1.10.0")
+    implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.foundation:foundation")
