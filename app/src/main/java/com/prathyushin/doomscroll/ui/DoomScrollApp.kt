@@ -1,6 +1,7 @@
 package com.prathyushin.doomscroll.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -27,12 +28,22 @@ private val Crimson = Color(0xFF8B1735)
 fun DoomScrollApp() {
     var selected by remember { mutableStateOf(0) }
     var query by remember { mutableStateOf("") }
+    var intentionalVideoOpen by remember { mutableStateOf(false) }
 
     val engine = remember { DoomPolicyEngine() }
     val repository = remember { SampleContentRepository() }
 
-    val home = remember {
-        repository.home().filter { engine.evaluate(it).decision.name == "ALLOW" }
+    val home = repository.home().filter {
+        engine.evaluate(it).decision.name == "ALLOW"
+    }
+
+    val visiblePosts = if (query.isBlank()) {
+        home
+    } else {
+        home.filter {
+            it.author.contains(query, ignoreCase = true) ||
+                it.body.contains(query, ignoreCase = true)
+        }
     }
 
     MaterialTheme(
@@ -49,24 +60,65 @@ fun DoomScrollApp() {
             containerColor = Ivory,
             bottomBar = {
                 NavigationBar(containerColor = Color(0xFFF1ECE6)) {
-                    listOf("Home", "Alerts", "Chats", "Story", "Profile").forEachIndexed { index, label ->
-                        NavigationBarItem(
-                            selected = selected == index,
-                            onClick = { selected = index },
-                            icon = { Text(listOf("⌂", "○", "□", "＋", "●")[index], fontSize = 18.sp) },
-                            label = { Text(label, fontSize = 11.sp) }
-                        )
-                    }
+                    listOf("Home", "Alerts", "Chats", "Story", "Profile")
+                        .forEachIndexed { index, label ->
+                            NavigationBarItem(
+                                selected = selected == index,
+                                onClick = { selected = index },
+                                icon = {
+                                    Text(
+                                        listOf("⌂", "○", "□", "＋", "●")[index],
+                                        fontSize = 18.sp
+                                    )
+                                },
+                                label = { Text(label, fontSize = 11.sp) }
+                            )
+                        }
                 }
             }
-        ) { padding ->
+        ) {
             when (selected) {
-                0 -> HomeScreen(home, query, { query = it })
-                1 -> SimpleScreen("Notifications", "Only useful, actionable notifications.")
-                2 -> SimpleScreen("Chats", "Conversations first. No engagement noise.")
-                3 -> SimpleScreen("Story", "View or publish stories when supported.")
-                4 -> SimpleScreen("Profile", "Your account, controls and content preferences.")
+                0 -> HomeScreen(
+                    posts = visiblePosts,
+                    query = query,
+                    onQuery = { query = it },
+                    onVideoRequested = { intentionalVideoOpen = true }
+                )
+                1 -> SimpleScreen(
+                    "Notifications",
+                    "Only useful, actionable notifications."
+                )
+                2 -> SimpleScreen(
+                    "Chats",
+                    "Conversations first. No engagement noise."
+                )
+                3 -> SimpleScreen(
+                    "Story",
+                    "View or publish stories when supported."
+                )
+                4 -> SimpleScreen(
+                    "Profile",
+                    "Your account, controls and content preferences."
+                )
             }
+        }
+
+        if (intentionalVideoOpen) {
+            AlertDialog(
+                onDismissRequest = { intentionalVideoOpen = false },
+                title = { Text("Intentional video") },
+                text = {
+                    Text(
+                        "You requested this video. Doom Scroll allows the intentional item, " +
+                            "but it will not automatically continue to another recommended video."
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = { intentionalVideoOpen = false }) {
+                        Text("Done")
+                    }
+                }
+            )
         }
     }
 }
@@ -75,7 +127,8 @@ fun DoomScrollApp() {
 private fun HomeScreen(
     posts: List<ContentItem>,
     query: String,
-    onQuery: (String) -> Unit
+    onQuery: (String) -> Unit,
+    onVideoRequested: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -123,17 +176,28 @@ private fun HomeScreen(
 
         Spacer(Modifier.height(8.dp))
 
-        LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            contentPadding = PaddingValues(bottom = 20.dp)
-        ) {
-            items(posts) { post -> PostCard(post) }
+        if (posts.isEmpty()) {
+            Text(
+                "Nothing found. Try a deliberate search.",
+                color = Color(0xFF6B6661),
+                fontSize = 14.sp,
+                modifier = Modifier.padding(top = 18.dp)
+            )
+        } else {
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(bottom = 20.dp)
+            ) {
+                items(posts, key = { it.id }) { post ->
+                    PostCard(post, onVideoRequested)
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun PostCard(post: ContentItem) {
+private fun PostCard(post: ContentItem, onVideoRequested: () -> Unit) {
     Surface(
         color = Paper,
         shape = RoundedCornerShape(22.dp),
@@ -151,7 +215,12 @@ private fun PostCard(post: ContentItem) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(if (post.type.name == "VIDEO") 230.dp else 180.dp)
-                    .background(Color(0xFFE2DDD7), RoundedCornerShape(16.dp)),
+                    .background(Color(0xFFE2DDD7), RoundedCornerShape(16.dp))
+                    .then(
+                        if (post.type.name == "VIDEO") {
+                            Modifier.clickable(onClick = onVideoRequested)
+                        } else Modifier
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
