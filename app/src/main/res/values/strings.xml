@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Doom Scroll</string>
+    <string name="accessibility_description">Doom Scroll monitors selected app sessions locally and can place a pause screen when sustained scrolling or long sessions cross your chosen limits. It does not read message content or collect data remotely.</string>
+</resources>
