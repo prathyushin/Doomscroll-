@@ -1,70 +1,91 @@
 # Doom Scroll
 
-**Doom Scroll v1.0.0 — Android foundation**
+**Doom Scroll v1.0.0 — intentional social client foundation**
 
-Doom Scroll is a social-media experience designed around **intentional social use without infinite short-video consumption**.
+Doom Scroll is an Android social-media client designed around intentional social use rather than recommendation-driven infinite consumption.
 
-The project keeps useful social functions while changing the behavioral model:
+## V1 product rules
 
-- Home prioritizes content from accounts the user follows.
-- Algorithmic recommendations are not part of the primary Home feed.
-- Search is intentional discovery rather than a recommendation surface.
-- A user can deliberately request a short video, but the core policy prevents automatic Reel-to-Reel progression.
-- Notifications are curated around useful events rather than routine engagement noise.
-- Users can follow a person while choosing to hide that person's posts and/or stories.
-- Doom Scroll does not inject its own advertising layer.
-- Instagram and Threads capabilities will be integrated only through supported platform capabilities and verified APIs/policies.
+- **Home = Following first.** Recommended content is filtered from the primary Home feed.
+- **Search is a destination, not Explore.** Discovery happens through an explicit search action.
+- **Five primary destinations:** Home, Search, Notifications, Chats, Profile.
+- **Floating dock:** macOS-style floating navigation dock with an ivory editorial visual system.
+- **Stories are separate.** Story viewing never auto-advances; Previous/Next are explicit user actions.
+- **Per-person hiding:** a person can be hidden from the local feed/story surface.
+- **No password collection:** Instagram and Threads connection starts an official browser OAuth flow.
+- **Token protection:** OAuth access tokens are encrypted with an Android Keystore-backed AES-GCM key and are never rendered in UI/logs.
+- **No recommendation injection:** the core policy engine rejects recommended and sponsored feed items.
+- **Intentional video boundary:** the product policy prevents automatic continuation into another short video.
 
-## Current build
+## Platform integration boundary
 
-The repository currently contains the first Android application foundation:
+The Android client contains the OAuth authorization-code + PKCE flow and callback routing for Instagram and Threads. Platform access is still governed by the provider's current APIs, scopes, app-review requirements, rate limits and account eligibility.
 
-- Kotlin + Jetpack Compose
-- Android 9+ (minSdk 26)
-- versionName = 1.0.0
-- Warm ivory visual system
-- Home / Notifications / Chats / Story / Profile navigation
-- Integrated intentional search field
-- Core DoomPolicyEngine
-- Recommendation filtering
-- Sponsored-content filtering at the product-policy layer
-- Hidden-person filtering
-- Single-intent short-video boundary
-- Unit tests for the core policy rules
-- GitHub Actions Android build and test workflow
+Client IDs are **configuration, not secrets**. Supply them through Gradle properties:
 
-## Architecture direction
+```properties
+INSTAGRAM_CLIENT_ID=your_instagram_app_id
+THREADS_CLIENT_ID=your_threads_app_id
+```
 
-Platform/API → Platform Adapter → Normalized Content Model → Doom Scroll Policy Engine → Local State/Cache → Doom Scroll UI
+Do not commit client secrets or access tokens. If a provider requires a confidential client secret for a particular exchange, the exchange must be moved to a trusted server; never embed that secret in the APK.
 
-Platform-specific integrations are intentionally isolated so changes to Instagram/Threads capabilities do not redefine the product's core rules.
+The registered redirect URIs for this build are:
 
-## Design direction
+- `doomscroll://oauth/instagram`
+- `doomscroll://oauth/threads`
 
-The UI/UX is being developed from the supplied Doom Scroll layout reference:
+These must match the redirect configuration of the corresponding provider application.
 
-- warm ivory foundation
-- classic/editorial character
-- restrained typography
-- calm surfaces
-- integrated search
-- intentional navigation
+## Architecture
+
+```
+Provider OAuth/API
+      ↓
+Platform adapter
+      ↓
+Normalized content model
+      ↓
+DoomPolicyEngine
+      ↓
+Local state / secure token store
+      ↓
+Compose UI
+```
+
+Platform-specific behavior is isolated from the product policy so Instagram/Threads API changes do not redefine the Doom Scroll experience.
+
+## Android stack
+
+- Kotlin
+- Jetpack Compose + Material 3
+- Android 9+ / API 26+
+- Target SDK 35
+- Java/Kotlin 17
+- Android Keystore + AES-GCM token encryption
+- GitHub Actions build/test workflow
+
+## Design system
+
+The UI follows the supplied ivory editorial direction:
+
+- warm ivory foundation `#FFF3E6`
+- charcoal typography
+- deep burgundy structure
+- restrained crimson accents
+- calm paper-like surfaces
+- generous whitespace
+- rounded editorial cards
 - no recommendation-first Explore surface
-
-Figma remains the UI/UX source of truth.
 
 ## Project source of truth
 
-- **Notion:** product requirements, durable decisions, research and architecture records
+- **Notion:** product requirements, durable decisions, research and architecture
 - **Figma:** UI/UX, components and interaction flows
-- **GitHub:** Android source code, tests, builds and releases
+- **GitHub:** Android source, tests, builds and releases
 
-## Status
+## Release status
 
-**Working on it.**
+**V1.0.0 Android implementation is in the repository.**
 
-This is an active development repository. Platform-dependent capabilities such as Instagram/Threads content access, Stories, DMs, publishing, notifications and advertising behavior must be verified against current official platform documentation before being treated as production commitments.
-
-## Release target
-
-The first official release target is **Doom Scroll v1.0.0**.
+The remaining production deployment work is provider-side configuration: registering the app with the supported Instagram/Threads APIs, configuring exact approved scopes and redirect URIs, completing any required platform review, and supplying the client IDs through build configuration.
