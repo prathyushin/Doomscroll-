@@ -23,6 +23,7 @@ fun DoomScrollApp() {
     var sessionLimit by remember { mutableStateOf(store.sessionLimitMinutes().toFloat()) }
     var cooldown by remember { mutableStateOf(store.cooldownMinutes().toFloat()) }
     var selected by remember { mutableStateOf(store.policies()) }
+    var disclosureAccepted by remember { mutableStateOf(store.disclosureAccepted()) }
 
     MaterialTheme {
         Column(
@@ -30,14 +31,35 @@ fun DoomScrollApp() {
             verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
             Text("Doom Scroll", style = MaterialTheme.typography.headlineLarge)
-            Text("A local pause system for intentional digital use.", style = MaterialTheme.typography.bodyLarge)
+            Text("A local, behavioral digital-wellbeing intervention system.", style = MaterialTheme.typography.bodyLarge)
 
-            OutlinedButton(
-                onClick = { context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) },
-                modifier = Modifier.fillMaxWidth()
-            ) { Text("Enable Doom Scroll in Accessibility") }
+            if (!disclosureAccepted) {
+                Card(colors = CardDefaults.cardColors(containerColor = Color(0xFFFFE8E8))) {
+                    Column(
+                        modifier = Modifier.padding(18.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text("Before enabling Accessibility", style = MaterialTheme.typography.titleLarge)
+                        Text("Doom Scroll uses Android AccessibilityService only to observe selected-app session and scroll events on this device and place a pause screen when your limits are crossed.")
+                        Text("It does not read message content, passwords, or typed text; it does not perform taps or swipes; and it does not send behavioral data to a remote server.")
+                        Button(
+                            onClick = {
+                                store.setDisclosureAccepted(true)
+                                disclosureAccepted = true
+                                context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("I understand — open Accessibility settings") }
+                    }
+                }
+            } else {
+                OutlinedButton(
+                    onClick = { context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Open Accessibility settings") }
+            }
 
-            Text("Pause after ${sessionLimit.toInt()} minutes", style = MaterialTheme.typography.titleMedium)
+            Text("Pause after " + sessionLimit.toInt() + " minutes", style = MaterialTheme.typography.titleMedium)
             Slider(
                 value = sessionLimit,
                 onValueChange = { sessionLimit = it },
@@ -45,7 +67,7 @@ fun DoomScrollApp() {
                 onValueChangeFinished = { store.setSessionLimitMinutes(sessionLimit.toInt()) }
             )
 
-            Text("Cooldown: ${cooldown.toInt()} minutes", style = MaterialTheme.typography.titleMedium)
+            Text("Cooldown: " + cooldown.toInt() + " minutes", style = MaterialTheme.typography.titleMedium)
             Slider(
                 value = cooldown,
                 onValueChange = { cooldown = it },
@@ -57,15 +79,15 @@ fun DoomScrollApp() {
             AppPicker(
                 context = context,
                 selected = selected,
-                onToggle = { packageName ->
-                    store.setEnabled(packageName, !selected.contains(packageName))
+                onToggle = { packageName, displayName ->
+                    store.setEnabled(packageName, !selected.contains(packageName), displayName)
                     selected = store.policies()
                 }
             )
 
             Spacer(Modifier.weight(1f))
             Text(
-                "Behavior signals stay on this device. Doom Scroll does not collect passwords, message content, or remote behavioral telemetry.",
+                "Behavior signals and intervention history stay on this device. Doom Scroll is not a medical diagnostic or treatment tool.",
                 style = MaterialTheme.typography.bodySmall
             )
         }
@@ -73,7 +95,11 @@ fun DoomScrollApp() {
 }
 
 @Composable
-private fun AppPicker(context: Context, selected: Set<String>, onToggle: (String) -> Unit) {
+private fun AppPicker(
+    context: Context,
+    selected: Set<String>,
+    onToggle: (String, String) -> Unit
+) {
     val apps = remember(context) {
         val pm = context.packageManager
         val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
@@ -89,9 +115,15 @@ private fun AppPicker(context: Context, selected: Set<String>, onToggle: (String
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         items(apps, key = { it.packageName }) { app ->
-            Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+            Row(
+                Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
                 Text(app.displayName)
-                Switch(checked = selected.contains(app.packageName), onCheckedChange = { onToggle(app.packageName) })
+                Switch(
+                    checked = selected.contains(app.packageName),
+                    onCheckedChange = { onToggle(app.packageName, app.displayName) }
+                )
             }
         }
     }
