@@ -1,33 +1,54 @@
 package com.prathyushin.doomscroll.data
 
 import android.content.Context
-import com.prathyushin.doomscroll.model.AppPolicy
 
 class LocalPolicyStore(context: Context) {
-    private val prefs = context.getSharedPreferences("doomscroll_policy", Context.MODE_PRIVATE)
+    private val appContext = context.applicationContext
+    private val secure = KeystoreValueStore(appContext)
+    private val dao = PolicyDatabase.get(appContext).policyDao()
 
-    fun isEnabled(packageName: String): Boolean =
-        prefs.getBoolean("enabled_$packageName", false)
+    fun isEnabled(packageName: String): Boolean = dao.isEnabled(packageName) == true
 
-    fun setEnabled(packageName: String, enabled: Boolean) {
-        prefs.edit().putBoolean("enabled_$packageName", enabled).apply()
+    fun setEnabled(packageName: String, enabled: Boolean, displayName: String = packageName) {
+        dao.upsertTarget(AppTargetEntity(packageName, displayName, enabled))
     }
 
-    fun sessionLimitMinutes(): Int = prefs.getInt("session_limit_minutes", 20)
+    fun sessionLimitMinutes(): Int = secure.getInt("session_limit_minutes") ?: 20
 
     fun setSessionLimitMinutes(value: Int) {
-        prefs.edit().putInt("session_limit_minutes", value.coerceIn(5, 120)).apply()
+        secure.putInt("session_limit_minutes", value.coerceIn(5, 120))
     }
 
-    fun cooldownMinutes(): Int = prefs.getInt("cooldown_minutes", 10)
+    fun cooldownMinutes(): Int = secure.getInt("cooldown_minutes") ?: 10
 
     fun setCooldownMinutes(value: Int) {
-        prefs.edit().putInt("cooldown_minutes", value.coerceIn(1, 60)).apply()
+        secure.putInt("cooldown_minutes", value.coerceIn(1, 60))
     }
 
-    fun policies(): Set<String> =
-        prefs.all.keys.filter { it.startsWith("enabled_") && prefs.getBoolean(it, false) }
-            .map { it.removePrefix("enabled_") }.toSet()
+    fun policies(): Set<String> = dao.enabledTargets().map { it.packageName }.toSet()
 
-    fun clear() { prefs.edit().clear().apply() }
+    fun recordIntervention(packageName: String, reason: String, sessionSeconds: Long, scrollRatePerMinute: Double) {
+        dao.recordIntervention(
+            InterventionHistoryEntity(
+                packageName = packageName,
+                timestampMs = System.currentTimeMillis(),
+                reason = reason,
+                sessionSeconds = sessionSeconds,
+                scrollRatePerMinute = scrollRatePerMinute
+            )
+        )
+    }
+
+    fun disclosureAccepted(): Boolean = secure.getBoolean("disclosure_accepted") == true
+
+    fun setDisclosureAccepted(accepted: Boolean) {
+        secure.putBoolean("disclosure_accepted", accepted)
+    }
+
+    fun clear() {
+        // Room targets/history remain local records; only encrypted scalar settings are cleared here.
+        secure.putBoolean("disclosure_accepted", false)
+        secure.putInt("session_limit_minutes", 20)
+        secure.putInt("cooldown_minutes", 10)
+    }
 }

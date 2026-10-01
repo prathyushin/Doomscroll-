@@ -10,6 +10,7 @@ data class BehaviorSnapshot(
     val packageName: String,
     val sessionSeconds: Long,
     val scrolls: Int,
+    val scrollRatePerMinute: Double,
     val reopenCount: Int
 )
 
