@@ -39,5 +39,11 @@ class LocalPolicyStore(context: Context) {
         )
     }
 
+    fun disclosureAccepted(): Boolean = prefs.getBoolean("disclosure_accepted", false)
+
+    fun setDisclosureAccepted(accepted: Boolean) {
+        prefs.edit().putBoolean("disclosure_accepted", accepted).apply()
+    }
+
     fun clear() { prefs.edit().clear().apply() }
 }
