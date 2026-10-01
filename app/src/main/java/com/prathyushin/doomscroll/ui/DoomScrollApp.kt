@@ -37,7 +37,7 @@ fun DoomScrollApp() {
                 modifier = Modifier.fillMaxWidth()
             ) { Text("Enable Doom Scroll in Accessibility") }
 
-            Text("Pause after ${{sessionLimit.toInt()} minutes", style = MaterialTheme.typography.titleMedium)
+            Text("Pause after ${sessionLimit.toInt()} minutes", style = MaterialTheme.typography.titleMedium)
             Slider(
                 value = sessionLimit,
                 onValueChange = { sessionLimit = it },
@@ -45,7 +45,7 @@ fun DoomScrollApp() {
                 onValueChangeFinished = { store.setSessionLimitMinutes(sessionLimit.toInt()) }
             )
 
-            Text("Cooldown: ${{cooldown.toInt()} minutes", style = MaterialTheme.typography.titleMedium)
+            Text("Cooldown: ${cooldown.toInt()} minutes", style = MaterialTheme.typography.titleMedium)
             Slider(
                 value = cooldown,
                 onValueChange = { cooldown = it },
