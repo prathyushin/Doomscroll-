@@ -39,11 +39,7 @@ interface PolicyDao {
     fun recordIntervention(event: InterventionHistoryEntity)
 }
 
-@Database(
-    entities = [AppTargetEntity::class, InterventionHistoryEntity::class],
-    version = 1,
-    exportSchema = false
-)
+@Database(entities = [AppTargetEntity::class, InterventionHistoryEntity::class], version = 1, exportSchema = false)
 abstract class PolicyDatabase : RoomDatabase() {
     abstract fun policyDao(): PolicyDao
 
@@ -56,7 +52,7 @@ abstract class PolicyDatabase : RoomDatabase() {
                     context.applicationContext,
                     PolicyDatabase::class.java,
                     "doomscroll.db"
-                ).build().also { INSTANCE = it }
+                ).allowMainThreadQueries().build().also { INSTANCE = it }
             }
     }
 }
