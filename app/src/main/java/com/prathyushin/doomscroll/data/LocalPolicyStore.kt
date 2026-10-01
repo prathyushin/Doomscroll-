@@ -4,7 +4,7 @@ import android.content.Context
 
 class LocalPolicyStore(context: Context) {
     private val appContext = context.applicationContext
-    private val prefs = appContext.getSharedPreferences("doomscroll_policy", Context.MODE_PRIVATE)
+    private val secure = KeystoreValueStore(appContext)
     private val dao = PolicyDatabase.get(appContext).policyDao()
 
     fun isEnabled(packageName: String): Boolean = dao.isEnabled(packageName) == true
@@ -13,16 +13,16 @@ class LocalPolicyStore(context: Context) {
         dao.upsertTarget(AppTargetEntity(packageName, displayName, enabled))
     }
 
-    fun sessionLimitMinutes(): Int = prefs.getInt("session_limit_minutes", 20)
+    fun sessionLimitMinutes(): Int = secure.getInt("session_limit_minutes") ?: 20
 
     fun setSessionLimitMinutes(value: Int) {
-        prefs.edit().putInt("session_limit_minutes", value.coerceIn(5, 120)).apply()
+        secure.putInt("session_limit_minutes", value.coerceIn(5, 120))
     }
 
-    fun cooldownMinutes(): Int = prefs.getInt("cooldown_minutes", 10)
+    fun cooldownMinutes(): Int = secure.getInt("cooldown_minutes") ?: 10
 
     fun setCooldownMinutes(value: Int) {
-        prefs.edit().putInt("cooldown_minutes", value.coerceIn(1, 60)).apply()
+        secure.putInt("cooldown_minutes", value.coerceIn(1, 60))
     }
 
     fun policies(): Set<String> = dao.enabledTargets().map { it.packageName }.toSet()
@@ -39,11 +39,16 @@ class LocalPolicyStore(context: Context) {
         )
     }
 
-    fun disclosureAccepted(): Boolean = prefs.getBoolean("disclosure_accepted", false)
+    fun disclosureAccepted(): Boolean = secure.getBoolean("disclosure_accepted") == true
 
     fun setDisclosureAccepted(accepted: Boolean) {
-        prefs.edit().putBoolean("disclosure_accepted", accepted).apply()
+        secure.putBoolean("disclosure_accepted", accepted)
     }
 
-    fun clear() { prefs.edit().clear().apply() }
+    fun clear() {
+        // Room targets/history remain local records; only encrypted scalar settings are cleared here.
+        secure.putBoolean("disclosure_accepted", false)
+        secure.putInt("session_limit_minutes", 20)
+        secure.putInt("cooldown_minutes", 10)
+    }
 }
