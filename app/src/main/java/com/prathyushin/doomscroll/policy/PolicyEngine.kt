@@ -12,7 +12,7 @@ class PolicyEngine(
     fun evaluate(snapshot: BehaviorSnapshot): PolicyDecision {
         val sustainedSession = snapshot.sessionSeconds >= sessionLimitSeconds
         val sustainedScrolling =
-            snapshot.scrollsPerMinute >= scrollRateThresholdPerMinute &&
+            snapshot.scrollRatePerMinute >= scrollRateThresholdPerMinute &&
                 snapshot.sessionSeconds >= sustainedScrollSeconds
         val repeatedReopen =
             snapshot.reopenCount >= reopenThreshold && snapshot.sessionSeconds >= 60
