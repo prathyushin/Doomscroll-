@@ -1,91 +1,94 @@
 # Doom Scroll
 
-**Doom Scroll v1.0.0 — intentional social client foundation**
+**Doom Scroll v1.0.0 — device-level digital-wellbeing intervention**
 
-Doom Scroll is an Android social-media client designed around intentional social use rather than recommendation-driven infinite consumption.
+Doom Scroll is an Android digital-wellbeing intervention system designed to make compulsive social-app sessions interruptible without becoming another social-media client.
 
-## V1 product rules
+## Architecture decision
 
-- **Home = Following first.** Recommended content is filtered from the primary Home feed.
-- **Search is a destination, not Explore.** Discovery happens through an explicit search action.
-- **Five primary destinations:** Home, Search, Notifications, Chats, Profile.
-- **Floating dock:** macOS-style floating navigation dock with an ivory editorial visual system.
-- **Stories are separate.** Story viewing never auto-advances; Previous/Next are explicit user actions.
-- **Per-person hiding:** a person can be hidden from the local feed/story surface.
-- **No password collection:** Instagram and Threads connection starts an official browser OAuth flow.
-- **Token protection:** OAuth access tokens are encrypted with an Android Keystore-backed AES-GCM key and are never rendered in UI/logs.
-- **No recommendation injection:** the core policy engine rejects recommended and sponsored feed items.
-- **Intentional video boundary:** the product policy prevents automatic continuation into another short video.
+The project has deliberately migrated away from the earlier Instagram/Threads client concept. V1 does **not** ingest, mirror, scrape, or proxy social-media feeds.
 
-## Platform integration boundary
-
-The Android client contains the OAuth authorization-code + PKCE flow and callback routing for Instagram and Threads. Platform access is still governed by the provider's current APIs, scopes, app-review requirements, rate limits and account eligibility.
-
-Client IDs are **configuration, not secrets**. Supply them through Gradle properties:
-
-```properties
-INSTAGRAM_CLIENT_ID=your_instagram_app_id
-THREADS_CLIENT_ID=your_threads_app_id
-```
-
-Do not commit client secrets or access tokens. If a provider requires a confidential client secret for a particular exchange, the exchange must be moved to a trusted server; never embed that secret in the APK.
-
-The registered redirect URIs for this build are:
-
-- `doomscroll://oauth/instagram`
-- `doomscroll://oauth/threads`
-
-These must match the redirect configuration of the corresponding provider application.
-
-## Architecture
+Instead, Doom Scroll operates locally on the device:
 
 ```
-Provider OAuth/API
-      ↓
-Platform adapter
-      ↓
-Normalized content model
-      ↓
-DoomPolicyEngine
-      ↓
-Local state / secure token store
-      ↓
-Compose UI
+Android AccessibilityService
+        ↓
+Local behavior signals
+        ↓
+PolicyEngine
+        ↓
+Pause overlay
+        ↓
+Intentional continuation or exit
 ```
 
-Platform-specific behavior is isolated from the product policy so Instagram/Threads API changes do not redefine the Doom Scroll experience.
+The product objective is to preserve access to the user's existing social apps while introducing a deliberate pause when sustained behavioral signals cross user-configured thresholds.
 
-## Android stack
+## V1.0.0 scope
 
-- Kotlin
-- Jetpack Compose + Material 3
+### Included
 - Android 9+ / API 26+
-- Target SDK 35
-- Java/Kotlin 17
-- Android Keystore + AES-GCM token encryption
-- GitHub Actions build/test workflow
+- Local AccessibilityService
+- User-selected protected apps
+- Session-duration detection
+- Scroll-event accumulation
+- Reopen-frequency signal
+- Debounced policy evaluation
+- Local intervention overlay
+- Explicit intentional continuation
+- Exit/back action
+- Local-only preferences
+- Calm warm-ivory editorial UI
+- Unit tests for the policy engine
+- GitHub Actions debug build and test
 
-## Design system
+### Explicitly excluded
+- Instagram/Threads feed aggregation
+- Scraping or reverse-engineering private APIs
+- Password collection
+- Provider access tokens
+- Cloud behavioral telemetry
+- Message-content inspection
+- Automated taps, swipes, ad skipping, or security bypasses
+- Recommendation feed
+- Infinite-scroll replacement UI
+- Gamified streaks or engagement loops
 
-The UI follows the supplied ivory editorial direction:
+## Privacy boundary
 
-- warm ivory foundation `#FFF3E6`
-- charcoal typography
-- deep burgundy structure
-- restrained crimson accents
-- calm paper-like surfaces
-- generous whitespace
-- rounded editorial cards
-- no recommendation-first Explore surface
+V1 stores policy configuration locally. The AccessibilityService consumes only the minimum event information needed for intervention decisions. It is configured without window-content retrieval and without gesture automation.
 
-## Project source of truth
+No server is required for the V1 intervention loop.
 
-- **Notion:** product requirements, durable decisions, research and architecture
-- **Figma:** UI/UX, components and interaction flows
-- **GitHub:** Android source, tests, builds and releases
+## User flow
 
-## Release status
+1. Open Doom Scroll.
+2. Choose which installed apps should be protected.
+3. Configure the session limit and cooldown.
+4. Enable Doom Scroll from Android Accessibility settings.
+5. Use the selected apps normally.
+6. When sustained signals cross the configured policy, Doom Scroll presents a pause.
+7. The user can intentionally continue or leave.
 
-**V1.0.0 Android implementation is in the repository.**
+## Important platform boundary
 
-The remaining production deployment work is provider-side configuration: registering the app with the supported Instagram/Threads APIs, configuring exact approved scopes and redirect URIs, completing any required platform review, and supplying the client IDs through build configuration.
+Android AccessibilityService is a privileged, user-consented capability. Distribution, disclosure, permission wording, and Play policy compliance must be validated against the current Google requirements before public release. This repository does not claim that a Play Store submission is already approved.
+
+## Roadmap
+
+- **V1.0:** local intervention core.
+- **V1.1:** stronger heuristics, better battery profiling, false-positive tuning and richer settings.
+- **V1.5:** optional local-only reflection/journaling and analytics.
+- **V2.0:** evaluate any additional integrations only after platform-policy and privacy review.
+
+## Source of truth
+
+- **Research/specification:** project PDF + architecture audit
+- **Notion:** durable product decisions, architecture, risks, roadmap and review notes
+- **Figma:** visual system and interaction design
+- **GitHub:** implementation, tests, CI and release artifacts
+
+## Review status
+
+This branch is the V1 device-intervention migration. It should be treated as an engineering implementation candidate until the CI build, on-device AccessibilityService behavior, permission flows, battery impact, false-positive behavior, and distribution-policy requirements have been verified.
+
