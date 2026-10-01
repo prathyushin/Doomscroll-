@@ -1,18 +1,13 @@
 package com.prathyushin.doomscroll.data
 
 import android.content.Context
-import com.prathyushin.doomscroll.model.AppPolicy
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 class LocalPolicyStore(context: Context) {
     private val appContext = context.applicationContext
     private val prefs = appContext.getSharedPreferences("doomscroll_policy", Context.MODE_PRIVATE)
-    private val db = PolicyDatabase.get(appContext)
-    private val dao = db.policyDao()
+    private val dao = PolicyDatabase.get(appContext).policyDao()
 
-    fun isEnabled(packageName: String): Boolean =
-        dao.isEnabled(packageName) == true
+    fun isEnabled(packageName: String): Boolean = dao.isEnabled(packageName) == true
 
     fun setEnabled(packageName: String, enabled: Boolean, displayName: String = packageName) {
         dao.upsertTarget(AppTargetEntity(packageName, displayName, enabled))
@@ -32,12 +27,7 @@ class LocalPolicyStore(context: Context) {
 
     fun policies(): Set<String> = dao.enabledTargets().map { it.packageName }.toSet()
 
-    fun recordIntervention(
-        packageName: String,
-        reason: String,
-        sessionSeconds: Long,
-        scrollRatePerMinute: Double
-    ) {
+    fun recordIntervention(packageName: String, reason: String, sessionSeconds: Long, scrollRatePerMinute: Double) {
         dao.recordIntervention(
             InterventionHistoryEntity(
                 packageName = packageName,
@@ -49,7 +39,5 @@ class LocalPolicyStore(context: Context) {
         )
     }
 
-    fun clear() {
-        prefs.edit().clear().apply()
-    }
+    fun clear() { prefs.edit().clear().apply() }
 }
