@@ -3,6 +3,7 @@ name: Doom Scroll Release
 on:
   workflow_dispatch:
   push:
+    branches: ["main"]
     tags: ["v*"]
 
 jobs:
