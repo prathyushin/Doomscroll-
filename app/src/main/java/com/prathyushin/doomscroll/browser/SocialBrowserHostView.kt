@@ -320,7 +320,7 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
               function notify() {
                 const path = location.pathname.toLowerCase();
                 const active = path.startsWith('/stories/') ||
-                  /^\\/reel\\/[^/]+\\/?$/.test(path) ||
+                  path.startsWith('/reel/') ||
                   path.startsWith('/reels/');
                 window.prompt('doomscroll-media:' + (active ? 'true' : 'false'));
               }
