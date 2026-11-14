@@ -1,7 +1,6 @@
 package com.prathyushin.doomscroll.data
 
 import android.content.Context
-import com.prathyushin.doomscroll.model.AppPolicy
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
