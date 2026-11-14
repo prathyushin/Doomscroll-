@@ -11,8 +11,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,6 +19,9 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import com.prathyushin.doomscroll.browser.SocialBrowserHostView
 import com.prathyushin.doomscroll.browser.SocialProvider
 import kotlinx.coroutines.delay
@@ -63,7 +64,7 @@ fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
             onSurface = Ink
         )
     ) {
-        Box(Modifier.fillMaxSize().background(Paper)) {
+        Box(Modifier.fillMaxSize().background(Paper).windowInsetsPadding(WindowInsets.systemBars)) {
             AndroidView(
                 factory = { viewContext ->
                     SocialBrowserHostView(viewContext).also { host ->
@@ -121,7 +122,7 @@ fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
                         contentColor = Color.White
                     )
                 ) {
-                    Icon(Icons.Filled.SwapHoriz, contentDescription = "Switch social app")
+                    Text("↔", style = MaterialTheme.typography.titleLarge, color = Color.White)
                 }
             }
         }
