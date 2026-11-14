@@ -26,9 +26,11 @@ import com.prathyushin.doomscroll.browser.SocialBrowserHostView
 import com.prathyushin.doomscroll.browser.SocialProvider
 import kotlinx.coroutines.delay
 
-private val Paper = Color(0xFFFFF3E6)
-private val Ink = Color(0xFF211D1B)
-private val Burgundy = Color(0xFF63313A)
+private val Black = Color(0xFF000000)
+private val SurfaceBlack = Color(0xFF0A0A0A)
+private val ElevatedBlack = Color(0xFF171717)
+private val TextWhite = Color(0xFFF5F5F5)
+private val Accent = Color(0xFFB7A0A4)
 private const val PREFS = "doom_scroll_social_preferences"
 private const val MUTED_KEY = "muted_story_usernames"
 
@@ -59,14 +61,17 @@ fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
     }
 
     MaterialTheme(
-        colorScheme = lightColorScheme(
-            primary = Burgundy,
-            background = Paper,
-            surface = Color(0xFFFFFCF7),
-            onSurface = Ink
+        colorScheme = darkColorScheme(
+            primary = Accent,
+            onPrimary = Black,
+            background = Black,
+            surface = SurfaceBlack,
+            surfaceVariant = ElevatedBlack,
+            onSurface = TextWhite,
+            onBackground = TextWhite
         )
     ) {
-        Box(Modifier.fillMaxSize().background(Paper).windowInsetsPadding(WindowInsets.systemBars)) {
+        Box(Modifier.fillMaxSize().background(Black).windowInsetsPadding(WindowInsets.systemBars)) {
             AndroidView(
                 factory = { viewContext ->
                     SocialBrowserHostView(viewContext).also { host ->
@@ -103,7 +108,7 @@ fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
                 modifier = Modifier
                     .padding(bottom = 22.dp)
                     .shadow(10.dp, RoundedCornerShape(28.dp))
-                    .background(Color(0xFFFDF9F4), RoundedCornerShape(28.dp))
+                    .background(ElevatedBlack, RoundedCornerShape(28.dp))
                     .padding(6.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -129,11 +134,11 @@ fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
                     modifier = Modifier.size(44.dp),
                     shape = CircleShape,
                     colors = IconButtonDefaults.filledIconButtonColors(
-                        containerColor = Burgundy,
-                        contentColor = Color.White
+                        containerColor = Accent,
+                        contentColor = Black
                     )
                 ) {
-                    Text("↔", style = MaterialTheme.typography.titleLarge, color = Color.White)
+                    Text("↔", style = MaterialTheme.typography.titleLarge, color = Black)
                 }
             }
             }
@@ -172,12 +177,14 @@ private fun DockProvider(label: String, selected: Boolean, onClick: () -> Unit) 
         Button(
             onClick = onClick,
             shape = RoundedCornerShape(22.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Accent, contentColor = Black),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp)
         ) { Text(label) }
     } else {
         OutlinedButton(
             onClick = onClick,
             shape = RoundedCornerShape(22.dp),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = TextWhite),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp)
         ) { Text(label) }
     }
