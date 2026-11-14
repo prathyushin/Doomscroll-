@@ -32,6 +32,10 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
     private var destroyed = false
     private var onCanGoBackChanged: ((Boolean) -> Unit)? = null
     private var onStoryLongPress: ((String) -> Unit)? = null
+    private var onMediaViewerChanged: ((Boolean) -> Unit)? = null
+    private var onFullscreenChanged: ((Boolean) -> Unit)? = null
+    private var fullscreenView: View? = null
+    private var fullscreenCallback: WebChromeClient.CustomViewCallback? = null
     private val popupViews = mutableSetOf<WebView>()
 
     init {
@@ -50,6 +54,18 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
 
     fun setOnStoryLongPress(listener: (String) -> Unit) {
         onStoryLongPress = listener
+    }
+
+    fun setOnMediaViewerChanged(listener: (Boolean) -> Unit) {
+        onMediaViewerChanged = listener
+    }
+
+    fun setOnFullscreenChanged(listener: (Boolean) -> Unit) {
+        onFullscreenChanged = listener
+    }
+
+    fun exitFullscreen() {
+        hideFullscreenView()
     }
 
     fun showProvider(provider: SocialProvider) {
@@ -102,8 +118,11 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
         }
         popupViews.clear()
         removeAllViews()
+        hideFullscreenView()
         onCanGoBackChanged = null
         onStoryLongPress = null
+        onMediaViewerChanged = null
+        onFullscreenChanged = null
     }
 
     private fun currentView(): WebView =
@@ -134,7 +153,29 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
                             return true
                         }
                     }
+                    if (message.startsWith("doomscroll-media:")) {
+                        onMediaViewerChanged?.invoke(message.endsWith(":true"))
+                        result.confirm("")
+                        return true
+                    }
                     return super.onJsPrompt(view, url, message, defaultValue, result)
+                }
+
+                override fun onShowCustomView(view: View, callback: WebChromeClient.CustomViewCallback) {
+                    if (fullscreenView != null) {
+                        callback.onCustomViewHidden()
+                        return
+                    }
+                    fullscreenView = view
+                    fullscreenCallback = callback
+                    view.setBackgroundColor(Color.BLACK)
+                    addView(view, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+                    view.bringToFront()
+                    onFullscreenChanged?.invoke(true)
+                }
+
+                override fun onHideCustomView() {
+                    hideFullscreenView()
                 }
 
                 override fun onCreateWindow(
@@ -204,7 +245,10 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
             override fun onPageFinished(view: WebView, url: String) {
                 super.onPageFinished(view, url)
                 when (provider) {
-                    SocialProvider.INSTAGRAM -> applyInstagramControls(view)
+                    SocialProvider.INSTAGRAM -> {
+                        applyInstagramControls(view)
+                        installMediaViewerObserver(view)
+                    }
                     SocialProvider.THREADS -> applyThreadsControls(view)
                 }
                 if (view === currentView()) notifyBackState()
@@ -259,6 +303,43 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
             }
         }
         return false
+    }
+
+    private fun hideFullscreenView() {
+        val view = fullscreenView ?: return
+        fullscreenView = null
+        (view.parent as? FrameLayout)?.removeView(view)
+        fullscreenCallback?.onCustomViewHidden()
+        fullscreenCallback = null
+        onFullscreenChanged?.invoke(false)
+    }
+
+    private fun installMediaViewerObserver(view: WebView) {
+        val script = """
+            (function() {
+              function notify() {
+                const path = location.pathname.toLowerCase();
+                const active = path.startsWith('/stories/') ||
+                  /^\\/reel\\/[^/]+\\/?$/.test(path) ||
+                  path.startsWith('/reels/');
+                window.prompt('doomscroll-media:' + (active ? 'true' : 'false'));
+              }
+              if (!window.__doomScrollMediaObserver) {
+                ['pushState','replaceState'].forEach(function(method) {
+                  const original = history[method];
+                  history[method] = function() {
+                    const result = original.apply(this, arguments);
+                    setTimeout(notify, 0);
+                    return result;
+                  };
+                });
+                window.addEventListener('popstate', notify);
+                window.__doomScrollMediaObserver = true;
+              }
+              notify();
+            })();
+        """.trimIndent()
+        view.evaluateJavascript(script, null)
     }
 
     private fun openExternal(uri: Uri) {
