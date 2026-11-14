@@ -159,7 +159,7 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
                   const href = (node.getAttribute('href') || '').toLowerCase();
                   if (href.startsWith('/explore') || href.startsWith('/reels') ||
                       label === 'explore' || label === 'reels') {
-                    node.style.setProperty('display', 'none', 'important');
+                    if (node.style.display !== 'none') node.style.setProperty('display', 'none', 'important');
                   }
                 });
               }
@@ -179,7 +179,7 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
                       const username = (parts[0] || '').toLowerCase();
                       if (muted.has(username)) {
                         const tile = link.closest('li,[role="listitem"]') || link;
-                        tile.style.setProperty('display', 'none', 'important');
+                        if (tile.style.display !== 'none') tile.style.setProperty('display', 'none', 'important');
                       }
                     } catch (_) {}
                   });
@@ -199,7 +199,7 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
               }
 
               function installSingleReelLock() {
-                if (!/^\\/reel\\/[^/]+/.test(location.pathname) || window.__doomScrollReelLock) return;
+                if (!/^\/reel\/[^/]+/.test(location.pathname) || window.__doomScrollReelLock) return;
                 let startX = 0, startY = 0;
                 document.addEventListener('touchstart', function(e) {
                   if (e.touches && e.touches.length) {
@@ -214,10 +214,10 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
                   if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 8) e.preventDefault();
                 }, {capture:true, passive:false});
                 document.addEventListener('wheel', function(e) {
-                  if (/^\\/reel\\/[^/]+/.test(location.pathname) && Math.abs(e.deltaY) > Math.abs(e.deltaX)) e.preventDefault();
+                  if (/^\/reel\/[^/]+/.test(location.pathname) && Math.abs(e.deltaY) > Math.abs(e.deltaX)) e.preventDefault();
                 }, {capture:true, passive:false});
                 document.addEventListener('keydown', function(e) {
-                  if (/^\\/reel\\/[^/]+/.test(location.pathname) && ['ArrowDown','PageDown',' '].includes(e.key)) e.preventDefault();
+                  if (/^\/reel\/[^/]+/.test(location.pathname) && ['ArrowDown','PageDown',' '].includes(e.key)) e.preventDefault();
                 }, true);
                 window.__doomScrollReelLock = true;
               }
