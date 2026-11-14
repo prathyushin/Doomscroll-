@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.net.Uri
+import android.os.Build
 import android.view.View
 import android.webkit.CookieManager
 import android.webkit.WebChromeClient
@@ -39,7 +40,7 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
     private val popupViews = mutableSetOf<WebView>()
 
     init {
-        setBackgroundColor(Color.rgb(255, 243, 230))
+        setBackgroundColor(Color.BLACK)
         cookieManager.setAcceptCookie(true)
         addView(instagramView, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         addView(threadsView, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
@@ -70,6 +71,11 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
 
     fun showProvider(provider: SocialProvider) {
         if (destroyed) return
+        if (activeProvider == provider) {
+            val sameTarget = currentView()
+            if (sameTarget.url.isNullOrBlank()) sameTarget.loadUrl(provider.startUrl)
+            return
+        }
         activeProvider = provider
         instagramView.visibility = if (provider == SocialProvider.INSTAGRAM) View.VISIBLE else View.GONE
         threadsView.visibility = if (provider == SocialProvider.THREADS) View.VISIBLE else View.GONE
@@ -80,9 +86,11 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
     }
 
     fun setMutedUsernames(usernames: Set<String>) {
-        mutedUsernames = usernames.map { it.trim().removePrefix("@").lowercase() }
+        val normalized = usernames.map { it.trim().removePrefix("@").lowercase() }
             .filter { it.matches(Regex("[a-z0-9._]{1,30}")) }
             .toSet()
+        if (normalized == mutedUsernames) return
+        mutedUsernames = normalized
         applyInstagramControls()
     }
 
@@ -134,7 +142,7 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
 
     private fun createWebView(provider: SocialProvider): WebView {
         return WebView(context).apply {
-            setBackgroundColor(Color.rgb(255, 243, 230))
+            setBackgroundColor(Color.BLACK)
             configureWebView(this)
             webChromeClient = object : WebChromeClient() {
                 override fun onJsPrompt(
@@ -224,6 +232,9 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
         view.settings.allowContentAccess = false
         view.settings.mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_NEVER_ALLOW
         view.settings.safeBrowsingEnabled = true
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            view.settings.forceDark = android.webkit.WebSettings.FORCE_DARK_ON
+        }
         cookieManager.setAcceptCookie(true)
         cookieManager.setAcceptThirdPartyCookies(view, true)
     }
@@ -466,7 +477,7 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
 
               function scheduleStoryUpdate() {
                 if (window.__doomScrollStoryTimer) clearTimeout(window.__doomScrollStoryTimer);
-                window.__doomScrollStoryTimer = setTimeout(attachStoryTrayObserver, 140);
+                window.__doomScrollStoryTimer = setTimeout(attachStoryTrayObserver, 220);
               }
 
               function attachStoryTrayObserver() {
@@ -589,7 +600,7 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
                 let timer = null;
                 window.__doomScrollThreadsObserver = new MutationObserver(function() {
                   if (timer) clearTimeout(timer);
-                  timer = setTimeout(hideForYouTab, 160);
+                  timer = setTimeout(hideForYouTab, 350);
                 });
                 window.__doomScrollThreadsObserver.observe(document.documentElement, {
                   childList: true, subtree: true
