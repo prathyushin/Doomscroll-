@@ -1,0 +1,58 @@
+name: Publish public demo APK
+
+on:
+  push:
+    branches: ["v1-release-hardening"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out release branch
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.7"
+
+      - name: Run unit tests
+        run: gradle testDebugUnitTest
+
+      - name: Build installable demo APK
+        run: |
+          gradle assembleDebug
+          cp app/build/outputs/apk/debug/app-debug.apk DoomScroll-v1.1.0-demo.1.apk
+          sha256sum DoomScroll-v1.1.0-demo.1.apk > SHA256SUMS.txt
+
+      - name: Publish public GitHub prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="v1.1.0-demo.1"
+          TITLE="Doom Scroll v1.1.0 — Demo Preview"
+          NOTES="Public demo preview of the Doom Scroll Instagram + Threads WebView shell.
+
+          This APK is a debug-build-signed demonstration build, not a production-signed release. It is intended for evaluation and device testing. A future production release should use a dedicated private Android release keystore.
+
+          Features include Instagram and Threads tabs, local Story muting, Explore/Reels restrictions, and DM-origin single-Reel handling. Platform website behavior and DOM selectors may change."
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" DoomScroll-v1.1.0-demo.1.apk SHA256SUMS.txt --clobber
+          else
+            gh release create "$TAG" DoomScroll-v1.1.0-demo.1.apk SHA256SUMS.txt \
+              --title "$TITLE" \
+              --notes "$NOTES" \
+              --prerelease \
+              --target "$GITHUB_SHA"
+          fi
