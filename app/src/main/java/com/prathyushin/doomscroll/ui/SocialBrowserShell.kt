@@ -8,6 +8,11 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -44,15 +49,24 @@ fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
     }
     var selectedStoryUser by remember { mutableStateOf<String?>(null) }
     var dockExpanded by remember { mutableStateOf(false) }
+    var dockVisible by remember { mutableStateOf(true) }
     var browserHost by remember { mutableStateOf<SocialBrowserHostView?>(null) }
     var canGoBack by remember { mutableStateOf(false) }
     var isMediaViewer by remember { mutableStateOf(false) }
     var isFullscreen by remember { mutableStateOf(false) }
 
-    LaunchedEffect(dockExpanded) {
-        if (dockExpanded) {
+    LaunchedEffect(dockExpanded, dockVisible, isMediaViewer, isFullscreen) {
+        if (isMediaViewer || isFullscreen) {
+            dockExpanded = false
+            dockVisible = false
+        } else if (dockExpanded) {
+            dockVisible = true
             delay(4200)
             dockExpanded = false
+            dockVisible = false
+        } else if (dockVisible) {
+            delay(2200)
+            dockVisible = false
         }
     }
 
@@ -97,9 +111,25 @@ fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
                 modifier = Modifier.fillMaxSize()
             )
 
-            // Small floating handle stays available; the full switcher appears on demand.
+            // A narrow bottom-edge gesture reveals the dock after it auto-hides.
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .height(14.dp)
+                    .pointerInput(isMediaViewer, isFullscreen) {
+                        detectTapGestures {
+                            if (!isMediaViewer && !isFullscreen) {
+                                dockVisible = true
+                                dockExpanded = true
+                            }
+                        }
+                    }
+            )
+
+            // Translucent floating glass dock; it disappears after inactivity.
             AnimatedVisibility(
-                visible = !isMediaViewer && !isFullscreen,
+                visible = dockVisible && !isMediaViewer && !isFullscreen,
                 modifier = Modifier.align(Alignment.BottomCenter),
                 enter = fadeIn() + slideInVertically { it / 2 },
                 exit = fadeOut() + slideOutVertically { it / 2 }
@@ -107,8 +137,10 @@ fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
             Row(
                 modifier = Modifier
                     .padding(bottom = 22.dp)
-                    .shadow(10.dp, RoundedCornerShape(28.dp))
-                    .background(ElevatedBlack, RoundedCornerShape(28.dp))
+                    .shadow(22.dp, RoundedCornerShape(30.dp))
+                    .clip(RoundedCornerShape(30.dp))
+                    .background(Color(0xB80C0C0C), RoundedCornerShape(30.dp))
+                    .border(1.dp, Color.White.copy(alpha = 0.22f), RoundedCornerShape(30.dp))
                     .padding(6.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -122,15 +154,20 @@ fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
                         DockProvider("Instagram", provider == SocialProvider.INSTAGRAM) {
                             provider = SocialProvider.INSTAGRAM
                             dockExpanded = false
+                            dockVisible = false
                         }
                         DockProvider("Threads", provider == SocialProvider.THREADS) {
                             provider = SocialProvider.THREADS
                             dockExpanded = false
+                            dockVisible = false
                         }
                     }
                 }
                 FilledIconButton(
-                    onClick = { dockExpanded = !dockExpanded },
+                    onClick = {
+                        dockVisible = true
+                        dockExpanded = !dockExpanded
+                    },
                     modifier = Modifier.size(44.dp),
                     shape = CircleShape,
                     colors = IconButtonDefaults.filledIconButtonColors(
