@@ -321,9 +321,10 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
 
               hideTrapNavigation();
               attachStoryTrayObserver();
-              if (!window.__doomScrollStoryDiscoveryObserver) {
+              const storyDiscoveryRoot = document.querySelector('header,[role="banner"]');
+              if (storyDiscoveryRoot && !window.__doomScrollStoryDiscoveryObserver) {
                 window.__doomScrollStoryDiscoveryObserver = new MutationObserver(scheduleStoryUpdate);
-                window.__doomScrollStoryDiscoveryObserver.observe(document.documentElement, {
+                window.__doomScrollStoryDiscoveryObserver.observe(storyDiscoveryRoot, {
                   childList: true, subtree: true
                 });
               }
