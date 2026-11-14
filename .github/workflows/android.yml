@@ -2,7 +2,7 @@ name: Android Build
 
 on:
   push:
-    branches: ["main", "v1-release-hardening"]
+    branches: ["main", "v1-release-hardening", "mvp-webview-social-shell"]
   pull_request:
     branches: ["main"]
   workflow_dispatch:
