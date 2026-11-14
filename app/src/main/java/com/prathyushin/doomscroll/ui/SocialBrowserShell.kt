@@ -44,6 +44,8 @@ fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
     var dockExpanded by remember { mutableStateOf(false) }
     var browserHost by remember { mutableStateOf<SocialBrowserHostView?>(null) }
     var canGoBack by remember { mutableStateOf(false) }
+    var isMediaViewer by remember { mutableStateOf(false) }
+    var isFullscreen by remember { mutableStateOf(false) }
 
     LaunchedEffect(dockExpanded) {
         if (dockExpanded) {
@@ -52,8 +54,8 @@ fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
         }
     }
 
-    BackHandler(enabled = canGoBack) {
-        browserHost?.goBack()
+    BackHandler(enabled = isFullscreen || canGoBack) {
+        if (isFullscreen) browserHost?.exitFullscreen() else browserHost?.goBack()
     }
 
     MaterialTheme(
@@ -71,6 +73,8 @@ fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
                         browserHost = host
                         host.setOnCanGoBackChanged { canGoBack = it }
                         host.setOnStoryLongPress { username -> selectedStoryUser = username }
+                        host.setOnMediaViewerChanged { isMediaViewer = it }
+                        host.setOnFullscreenChanged { isFullscreen = it }
                         onBrowserHostReady(host)
                         host.setMutedUsernames(mutedUsers)
                         host.showProvider(provider)
@@ -80,6 +84,8 @@ fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
                     browserHost = host
                     host.setOnCanGoBackChanged { canGoBack = it }
                     host.setOnStoryLongPress { username -> selectedStoryUser = username }
+                    host.setOnMediaViewerChanged { isMediaViewer = it }
+                    host.setOnFullscreenChanged { isFullscreen = it }
                     host.setMutedUsernames(mutedUsers)
                     host.showProvider(provider)
                 },
@@ -87,6 +93,12 @@ fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
             )
 
             // Small floating handle stays available; the full switcher appears on demand.
+            AnimatedVisibility(
+                visible = !isMediaViewer && !isFullscreen,
+                modifier = Modifier.align(Alignment.BottomCenter),
+                enter = fadeIn() + slideInVertically { it / 2 },
+                exit = fadeOut() + slideOutVertically { it / 2 }
+            ) {
             Row(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -124,6 +136,7 @@ fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
                 ) {
                     Text("↔", style = MaterialTheme.typography.titleLarge, color = Color.White)
                 }
+            }
             }
         }
     }
