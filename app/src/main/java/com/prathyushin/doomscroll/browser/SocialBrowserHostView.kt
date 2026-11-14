@@ -14,7 +14,7 @@ import org.json.JSONArray
 
 enum class SocialProvider(val startUrl: String) {
     INSTAGRAM("https://www.instagram.com/"),
-    THREADS("https://www.threads.net/")
+    THREADS("https://www.threads.com/")
 }
 
 /**
@@ -124,30 +124,13 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
 
     private fun handleNavigation(view: WebView, uri: Uri, provider: SocialProvider): Boolean {
         val host = uri.host?.lowercase().orEmpty()
-        if (!isAllowedHost(host, provider)) return true
+        if (!SocialRoutePolicy.isAllowedHost(host, provider)) return true
 
-        if (provider == SocialProvider.INSTAGRAM && isBlockedInstagramRoute(uri.path.orEmpty())) {
+        if (provider == SocialProvider.INSTAGRAM && SocialRoutePolicy.isBlockedInstagramPath(uri.path.orEmpty())) {
             view.post { view.loadUrl(SocialProvider.INSTAGRAM.startUrl) }
             return true
         }
         return false
-    }
-
-    private fun isAllowedHost(host: String, provider: SocialProvider): Boolean {
-        val platformHost = when (provider) {
-            SocialProvider.INSTAGRAM -> host == "instagram.com" || host.endsWith(".instagram.com")
-            SocialProvider.THREADS -> host == "threads.net" || host.endsWith(".threads.net")
-        }
-        val metaAuthHost = host == "facebook.com" || host.endsWith(".facebook.com") ||
-            host == "accountscenter.instagram.com"
-        return platformHost || metaAuthHost
-    }
-
-    private fun isBlockedInstagramRoute(path: String): Boolean {
-        val normalized = if (path.startsWith("/")) path.lowercase() else "/${path.lowercase()}"
-        return normalized == "/explore" || normalized.startsWith("/explore/") ||
-            normalized == "/reels" || normalized.startsWith("/reels/")
-        // Singular /reel/{shortcode}/ remains available as a one-item destination.
     }
 
     private fun applyInstagramControls(target: WebView = instagramView) {
@@ -215,9 +198,8 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
                 });
               }
 
-              // A singular /reel/ URL is permitted as a one-item destination.
-              // Lock only vertical gesture navigation on that route; taps remain usable.
-              if (/^\/reel\/[^/]+/.test(location.pathname) && !window.__doomScrollReelLock) {
+              function installSingleReelLock() {
+                if (!/^\\/reel\\/[^/]+/.test(location.pathname) || window.__doomScrollReelLock) return;
                 let startX = 0, startY = 0;
                 document.addEventListener('touchstart', function(e) {
                   if (e.touches && e.touches.length) {
@@ -239,6 +221,30 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
                 }, true);
                 window.__doomScrollReelLock = true;
               }
+
+              function enforceRoutePolicy() {
+                const path = location.pathname.toLowerCase();
+                if (path === '/explore' || path.startsWith('/explore/') ||
+                    path === '/reels' || path.startsWith('/reels/')) {
+                  location.replace('https://www.instagram.com/');
+                  return;
+                }
+                installSingleReelLock();
+              }
+
+              if (!window.__doomScrollHistoryPatched) {
+                ['pushState','replaceState'].forEach(function(method) {
+                  const original = history[method];
+                  history[method] = function() {
+                    const result = original.apply(this, arguments);
+                    setTimeout(enforceRoutePolicy, 0);
+                    return result;
+                  };
+                });
+                window.addEventListener('popstate', enforceRoutePolicy);
+                window.__doomScrollHistoryPatched = true;
+              }
+              enforceRoutePolicy();
             })();
         """.trimIndent()
         target.evaluateJavascript(script, null)
