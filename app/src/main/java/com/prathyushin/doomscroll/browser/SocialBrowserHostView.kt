@@ -400,6 +400,7 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
                   }
                 }
                 updateMutedStories();
+                installStoryLongPress();
               }
 
               hideTrapNavigation();
