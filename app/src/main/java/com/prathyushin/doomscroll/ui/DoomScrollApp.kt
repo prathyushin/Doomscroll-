@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.Intent
 import android.provider.Settings
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -43,7 +45,7 @@ fun DoomScrollApp() {
     ) {
         Surface(modifier = Modifier.fillMaxSize(), color = Paper) {
             Column(
-                modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 24.dp),
+                modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -60,12 +62,13 @@ fun DoomScrollApp() {
                             else selected.size.toString() + " app(s) selected for intentional-use pauses.",
                             style = MaterialTheme.typography.bodyMedium, color = MutedInk
                         )
-                        Button(
-                            onClick = { context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) },
-                            modifier = Modifier.fillMaxWidth()
-                        ) { Text(if (disclosureAccepted) "Manage Accessibility permission" else "Review permission and continue") }
-                        if (!disclosureAccepted) {
-                            Text("Read the disclosure below and confirm that you understand how Android Accessibility is used.", style = MaterialTheme.typography.bodySmall, color = MutedInk)
+                        if (disclosureAccepted) {
+                            Button(
+                                onClick = { context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) },
+                                modifier = Modifier.fillMaxWidth()
+                            ) { Text("Manage Accessibility permission") }
+                        } else {
+                            Text("Review the disclosure below before enabling protection.", style = MaterialTheme.typography.bodySmall, color = MutedInk)
                         }
                     }
                 }
@@ -84,7 +87,7 @@ fun DoomScrollApp() {
                     }
                 }
 
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.weight(1f)) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Choose protected apps", style = MaterialTheme.typography.titleLarge, color = Ink)
                     AppPicker(context = context, selected = selected, onToggle = { packageName, displayName ->
                         store.setEnabled(packageName, !selected.contains(packageName), displayName)
@@ -136,7 +139,7 @@ private fun AppPicker(context: Context, selected: Set<String>, onToggle: (String
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         OutlinedTextField(value = search, onValueChange = { search = it }, modifier = Modifier.fillMaxWidth(),
             singleLine = true, label = { Text("Search installed apps") })
-        LazyColumn(modifier = Modifier.fillMaxWidth().weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        LazyColumn(modifier = Modifier.fillMaxWidth().height(220.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             items(visibleApps, key = { it.packageName }) { app ->
                 Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                     Column(modifier = Modifier.weight(1f)) {
