@@ -214,10 +214,10 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
                   if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 8) e.preventDefault();
                 }, {capture:true, passive:false});
                 document.addEventListener('wheel', function(e) {
-                  if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) e.preventDefault();
+                  if (/^\\/reel\\/[^/]+/.test(location.pathname) && Math.abs(e.deltaY) > Math.abs(e.deltaX)) e.preventDefault();
                 }, {capture:true, passive:false});
                 document.addEventListener('keydown', function(e) {
-                  if (['ArrowDown','PageDown',' '].includes(e.key)) e.preventDefault();
+                  if (/^\\/reel\\/[^/]+/.test(location.pathname) && ['ArrowDown','PageDown',' '].includes(e.key)) e.preventDefault();
                 }, true);
                 window.__doomScrollReelLock = true;
               }
