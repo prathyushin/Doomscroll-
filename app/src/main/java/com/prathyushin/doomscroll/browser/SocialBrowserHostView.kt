@@ -31,6 +31,7 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
     private var allowCurrentReelFromDm = false
     private var destroyed = false
     private var onCanGoBackChanged: ((Boolean) -> Unit)? = null
+    private var onStoryLongPress: ((String) -> Unit)? = null
     private val popupViews = mutableSetOf<WebView>()
 
     init {
@@ -45,6 +46,10 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
     fun setOnCanGoBackChanged(listener: (Boolean) -> Unit) {
         onCanGoBackChanged = listener
         notifyBackState()
+    }
+
+    fun setOnStoryLongPress(listener: (String) -> Unit) {
+        onStoryLongPress = listener
     }
 
     fun showProvider(provider: SocialProvider) {
@@ -98,6 +103,7 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
         popupViews.clear()
         removeAllViews()
         onCanGoBackChanged = null
+        onStoryLongPress = null
     }
 
     private fun currentView(): WebView =
@@ -112,6 +118,25 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
             setBackgroundColor(Color.rgb(255, 243, 230))
             configureWebView(this)
             webChromeClient = object : WebChromeClient() {
+                override fun onJsPrompt(
+                    view: WebView,
+                    url: String,
+                    message: String,
+                    defaultValue: String?,
+                    result: android.webkit.JsPromptResult
+                ): Boolean {
+                    val prefix = "doomscroll-story:"
+                    if (message.startsWith(prefix)) {
+                        val username = message.removePrefix(prefix).trim().lowercase()
+                        if (username.matches(Regex("[a-z0-9._]{1,30}"))) {
+                            onStoryLongPress?.invoke(username)
+                            result.confirm("")
+                            return true
+                        }
+                    }
+                    return super.onJsPrompt(view, url, message, defaultValue, result)
+                }
+
                 override fun onCreateWindow(
                     view: WebView,
                     isDialog: Boolean,
@@ -193,6 +218,21 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
 
     private fun handleNavigation(view: WebView, uri: Uri, provider: SocialProvider): Boolean {
         val host = uri.host?.lowercase().orEmpty()
+
+        // Meta sometimes wraps a normal HTTPS destination in an intent:// URL.
+        // Keep first-party Threads/Instagram redirects inside their existing WebView.
+        if (uri.scheme.equals("intent", ignoreCase = true) &&
+            SocialRoutePolicy.isAllowedHost(host, provider)) {
+            val httpsUri = Uri.Builder()
+                .scheme("https")
+                .encodedAuthority(uri.encodedAuthority)
+                .encodedPath(uri.encodedPath)
+                .encodedQuery(uri.encodedQuery)
+                .build()
+            view.post { view.loadUrl(httpsUri.toString()) }
+            return true
+        }
+
         if (!SocialRoutePolicy.isAllowedHost(host, provider)) {
             if (uri.scheme == "https" || uri.scheme == "http") openExternal(uri)
             return true
@@ -296,6 +336,49 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
                     const tile = link.closest('li,[role="listitem"]') || link;
                     if (muted.has(username)) tile.classList.add('doom-scroll-muted-story');
                     else tile.classList.remove('doom-scroll-muted-story');
+                  } catch (_) {}
+                });
+              }
+
+              function installStoryLongPress() {
+                const tray = getStoryTray();
+                if (!tray || tray.__doomScrollLongPressInstalled) return;
+                tray.__doomScrollLongPressInstalled = true;
+                let pressTimer = null;
+                let pressedLink = null;
+                function cancelPress() {
+                  if (pressTimer) clearTimeout(pressTimer);
+                  pressTimer = null;
+                  pressedLink = null;
+                }
+                tray.addEventListener('touchstart', function(event) {
+                  const link = event.target.closest('a[href]');
+                  if (!link) return;
+                  cancelPress();
+                  pressedLink = link;
+                  pressTimer = setTimeout(function() {
+                    try {
+                      const path = new URL(link.href, location.origin).pathname;
+                      const username = path.split('/').filter(Boolean)[0] || '';
+                      if (/^[a-z0-9._]{1,30}$/i.test(username)) {
+                        window.prompt('doomscroll-story:' + username.toLowerCase());
+                      }
+                    } catch (_) {}
+                    cancelPress();
+                  }, 650);
+                }, {passive:true});
+                ['touchend','touchcancel','touchmove'].forEach(function(type) {
+                  tray.addEventListener(type, cancelPress, {passive:true});
+                });
+                tray.addEventListener('contextmenu', function(event) {
+                  const link = event.target.closest('a[href]');
+                  if (!link) return;
+                  try {
+                    const username = new URL(link.href, location.origin).pathname.split('/').filter(Boolean)[0] || '';
+                    if (/^[a-z0-9._]{1,30}$/i.test(username)) {
+                      event.preventDefault();
+                      window.prompt('doomscroll-story:' + username.toLowerCase());
+                    }
                   } catch (_) {}
                 });
               }
