@@ -28,6 +28,7 @@ class DoomAccessibilityService : AccessibilityService() {
     private var sessionStartedAt = 0L
     private var scrollCount = 0
     private var highScrollStartedAt = 0L
+    private var lastScrollEventAt = 0L
     private var lastInterventionAt = 0L
     private var overlay: View? = null
 
@@ -64,13 +65,19 @@ class DoomAccessibilityService : AccessibilityService() {
         }
 
         if (event.eventType == AccessibilityEvent.TYPE_VIEW_SCROLLED) {
+            if (lastScrollEventAt == 0L || now - lastScrollEventAt > MAX_SCROLL_GAP_MILLIS) {
+                highScrollStartedAt = 0L
+            }
+            lastScrollEventAt = now
             scrollCount++
             scrollEvents.addLast(now)
         }
 
         trimScrollWindow(now)
         val scrollRatePerMinute = scrollEvents.size.toDouble()
-        if (scrollRatePerMinute >= SCROLL_RATE_THRESHOLD_PER_MINUTE) {
+        if (scrollRatePerMinute >= SCROLL_RATE_THRESHOLD_PER_MINUTE &&
+            lastScrollEventAt > 0L && now - lastScrollEventAt <= MAX_SCROLL_GAP_MILLIS
+        ) {
             if (highScrollStartedAt == 0L) highScrollStartedAt = now
         } else {
             highScrollStartedAt = 0L
@@ -116,6 +123,7 @@ class DoomAccessibilityService : AccessibilityService() {
         sessionStartedAt = 0L
         scrollCount = 0
         highScrollStartedAt = 0L
+        lastScrollEventAt = 0L
         scrollEvents.clear()
         removeOverlay()
     }
@@ -208,6 +216,7 @@ class DoomAccessibilityService : AccessibilityService() {
 
     private companion object {
         const val SCROLL_WINDOW_MILLIS = 60_000L
+        const val MAX_SCROLL_GAP_MILLIS = 10_000L
         const val SCROLL_RATE_THRESHOLD_PER_MINUTE = 12.0
         const val PAUSE_SECONDS = 15
     }
