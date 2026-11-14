@@ -11,7 +11,8 @@ data class BehaviorSnapshot(
     val sessionSeconds: Long,
     val scrolls: Int,
     val scrollRatePerMinute: Double,
-    val reopenCount: Int
+    val reopenCount: Int,
+    val sustainedScrollSeconds: Long = 0L
 )
 
 data class PolicyDecision(
