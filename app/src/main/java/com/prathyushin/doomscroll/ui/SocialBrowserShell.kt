@@ -33,8 +33,9 @@ fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
     var showMuteDialog by remember { mutableStateOf(false) }
     var usernameInput by remember { mutableStateOf("") }
     var browserHost by remember { mutableStateOf<SocialBrowserHostView?>(null) }
+    var canGoBack by remember { mutableStateOf(false) }
 
-    BackHandler(enabled = browserHost?.canGoBack() == true) {
+    BackHandler(enabled = canGoBack) {
         browserHost?.goBack()
     }
 
@@ -65,6 +66,7 @@ fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
                 factory = { viewContext ->
                     SocialBrowserHostView(viewContext).also {
                         browserHost = it
+                        it.setOnCanGoBackChanged { canGoBack = it }
                         onBrowserHostReady(it)
                         it.setMutedUsernames(mutedUsers)
                         it.showProvider(provider)
@@ -72,6 +74,7 @@ fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
                 },
                 update = {
                     browserHost = it
+                    it.setOnCanGoBackChanged { canGoBack = it }
                     it.setMutedUsernames(mutedUsers)
                     it.showProvider(provider)
                 },
