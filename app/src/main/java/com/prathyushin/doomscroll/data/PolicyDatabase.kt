@@ -27,16 +27,16 @@ data class InterventionHistoryEntity(
 @androidx.room.Dao
 interface PolicyDao {
     @androidx.room.Query("SELECT * FROM app_targets WHERE enabled = 1")
-    fun enabledTargets(): List<AppTargetEntity>
+    suspend fun enabledTargets(): List<AppTargetEntity>
 
     @androidx.room.Query("SELECT enabled FROM app_targets WHERE packageName = :packageName LIMIT 1")
-    fun isEnabled(packageName: String): Boolean?
+    suspend fun isEnabled(packageName: String): Boolean?
 
     @androidx.room.Insert(onConflict = androidx.room.OnConflictStrategy.REPLACE)
-    fun upsertTarget(target: AppTargetEntity)
+    suspend fun upsertTarget(target: AppTargetEntity)
 
     @androidx.room.Insert
-    fun recordIntervention(event: InterventionHistoryEntity)
+    suspend fun recordIntervention(event: InterventionHistoryEntity)
 }
 
 @Database(entities = [AppTargetEntity::class, InterventionHistoryEntity::class], version = 1, exportSchema = false)
@@ -52,7 +52,7 @@ abstract class PolicyDatabase : RoomDatabase() {
                     context.applicationContext,
                     PolicyDatabase::class.java,
                     "doomscroll.db"
-                ).allowMainThreadQueries().build().also { INSTANCE = it }
+                ).build().also { INSTANCE = it }
             }
     }
 }
