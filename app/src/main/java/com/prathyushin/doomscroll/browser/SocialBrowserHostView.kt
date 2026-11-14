@@ -28,6 +28,7 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
     private val threadsView = createWebView(SocialProvider.THREADS)
     private var activeProvider = SocialProvider.INSTAGRAM
     private var mutedUsernames: Set<String> = emptySet()
+    private var allowCurrentReelFromDm = false
     private var destroyed = false
     private var onCanGoBackChanged: ((Boolean) -> Unit)? = null
     private val popupViews = mutableSetOf<WebView>()
@@ -203,11 +204,18 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
                 view.post { view.loadUrl(SocialProvider.INSTAGRAM.startUrl) }
                 return true
             }
-            if (SocialRoutePolicy.isSingleReelPath(path) &&
-                !SocialRoutePolicy.isDmSourcePath(Uri.parse(view.url.orEmpty()).path.orEmpty())
-            ) {
-                view.post { view.loadUrl(SocialProvider.INSTAGRAM.startUrl) }
-                return true
+            if (SocialRoutePolicy.isSingleReelPath(path)) {
+                val sourcePath = Uri.parse(view.url.orEmpty()).path.orEmpty()
+                if (!SocialRoutePolicy.isDmSourcePath(sourcePath)) {
+                    allowCurrentReelFromDm = false
+                    view.post { view.loadUrl(SocialProvider.INSTAGRAM.startUrl) }
+                    return true
+                }
+                // A full-page DM-to-Reel navigation gets a one-time grant that
+                // the injected page script uses to enable the single-Reel lock.
+                allowCurrentReelFromDm = true
+            } else {
+                allowCurrentReelFromDm = false
             }
         }
         return false
@@ -228,8 +236,12 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
     private fun applyInstagramControls(target: WebView = instagramView) {
         if (destroyed || target.url.isNullOrBlank()) return
         val mutedJson = JSONArray(mutedUsernames.toList()).toString()
+        val grantDmReelLock = allowCurrentReelFromDm &&
+            SocialRoutePolicy.isSingleReelPath(Uri.parse(target.url.orEmpty()).path.orEmpty())
+        if (grantDmReelLock) allowCurrentReelFromDm = false
         val script = """
             (function() {
+              if ($grantDmReelLock) window.__doomScrollDmReelActive = true;
               window.__doomScrollMutedUsers = $mutedJson;
               const styleId = 'doom-scroll-controls';
               let style = document.getElementById(styleId);
