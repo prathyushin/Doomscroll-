@@ -22,6 +22,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.foundation.layout.WindowInsets
@@ -139,7 +142,10 @@ fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
                     .padding(bottom = 22.dp)
                     .shadow(22.dp, RoundedCornerShape(30.dp))
                     .clip(RoundedCornerShape(30.dp))
-                    .background(Color(0xB80C0C0C), RoundedCornerShape(30.dp))
+                    .background(
+                        Brush.verticalGradient(listOf(Color(0xD92A2A2A), Color(0xA6090909))),
+                        RoundedCornerShape(30.dp)
+                    )
                     .border(1.dp, Color.White.copy(alpha = 0.22f), RoundedCornerShape(30.dp))
                     .padding(6.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -216,7 +222,7 @@ private fun DockProvider(label: String, selected: Boolean, onClick: () -> Unit) 
             shape = RoundedCornerShape(22.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Accent, contentColor = Black),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp)
-        ) { Text(label) }
+        ) { Text(label, fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Medium) }
     } else {
         OutlinedButton(
             onClick = onClick,
