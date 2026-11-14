@@ -1,6 +1,7 @@
 package com.prathyushin.doomscroll
 
 import android.os.Bundle
+import android.graphics.Color
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import com.prathyushin.doomscroll.browser.SocialBrowserHostView
@@ -11,6 +12,12 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        window.statusBarColor = Color.BLACK
+        window.navigationBarColor = Color.BLACK
+        if (android.os.Build.VERSION.SDK_INT >= 29) {
+            window.isNavigationBarContrastEnforced = false
+            window.isStatusBarContrastEnforced = false
+        }
         setContent {
             DoomScrollApp(onBrowserHostReady = { browserHost = it })
         }
