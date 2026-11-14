@@ -2,19 +2,29 @@ package com.prathyushin.doomscroll.ui
 
 import android.content.Context
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import com.prathyushin.doomscroll.browser.SocialBrowserHostView
 import com.prathyushin.doomscroll.browser.SocialProvider
+import kotlinx.coroutines.delay
 
 private val Paper = Color(0xFFFFF3E6)
 private val Ink = Color(0xFF211D1B)
@@ -30,10 +40,17 @@ fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
     var mutedUsers by remember {
         mutableStateOf(prefs.getStringSet(MUTED_KEY, emptySet())?.toSet() ?: emptySet())
     }
-    var showMuteDialog by remember { mutableStateOf(false) }
-    var usernameInput by remember { mutableStateOf("") }
+    var selectedStoryUser by remember { mutableStateOf<String?>(null) }
+    var dockExpanded by remember { mutableStateOf(false) }
     var browserHost by remember { mutableStateOf<SocialBrowserHostView?>(null) }
     var canGoBack by remember { mutableStateOf(false) }
+
+    LaunchedEffect(dockExpanded) {
+        if (dockExpanded) {
+            delay(4200)
+            dockExpanded = false
+        }
+    }
 
     BackHandler(enabled = canGoBack) {
         browserHost?.goBack()
@@ -47,126 +64,109 @@ fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
             onSurface = Ink
         )
     ) {
-        Column(Modifier.fillMaxSize().background(Paper)) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-            ) {
-                Column {
-                    Text("DOOM SCROLL", style = MaterialTheme.typography.labelLarge, color = Burgundy)
-                    Text("Your time. Your attention.", style = MaterialTheme.typography.titleMedium, color = Ink)
-                }
-                TextButton(onClick = { showMuteDialog = true }) {
-                    Text("Mute Stories · ${mutedUsers.size}", color = Burgundy)
-                }
-            }
-
+        Box(Modifier.fillMaxSize().background(Paper).windowInsetsPadding(WindowInsets.systemBars)) {
             AndroidView(
                 factory = { viewContext ->
-                    SocialBrowserHostView(viewContext).also {
-                        browserHost = it
-                        it.setOnCanGoBackChanged { canGoBack = it }
-                        onBrowserHostReady(it)
-                        it.setMutedUsernames(mutedUsers)
-                        it.showProvider(provider)
+                    SocialBrowserHostView(viewContext).also { host ->
+                        browserHost = host
+                        host.setOnCanGoBackChanged { canGoBack = it }
+                        host.setOnStoryLongPress { username -> selectedStoryUser = username }
+                        onBrowserHostReady(host)
+                        host.setMutedUsernames(mutedUsers)
+                        host.showProvider(provider)
                     }
                 },
-                update = {
-                    browserHost = it
-                    it.setOnCanGoBackChanged { canGoBack = it }
-                    it.setMutedUsernames(mutedUsers)
-                    it.showProvider(provider)
+                update = { host ->
+                    browserHost = host
+                    host.setOnCanGoBackChanged { canGoBack = it }
+                    host.setOnStoryLongPress { username -> selectedStoryUser = username }
+                    host.setMutedUsernames(mutedUsers)
+                    host.showProvider(provider)
                 },
-                modifier = Modifier.weight(1f).fillMaxWidth()
+                modifier = Modifier.fillMaxSize()
             )
 
+            // Small floating handle stays available; the full switcher appears on demand.
             Row(
-                modifier = Modifier.fillMaxWidth().background(Color(0xFFFFFCF7)).padding(10.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 22.dp)
+                    .shadow(10.dp, RoundedCornerShape(28.dp))
+                    .background(Color(0xFFFDF9F4), RoundedCornerShape(28.dp))
+                    .padding(6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                ProviderTab(
-                    label = "Instagram",
-                    selected = provider == SocialProvider.INSTAGRAM,
-                    modifier = Modifier.weight(1f)
-                ) { provider = SocialProvider.INSTAGRAM }
-                ProviderTab(
-                    label = "Threads",
-                    selected = provider == SocialProvider.THREADS,
-                    modifier = Modifier.weight(1f)
-                ) { provider = SocialProvider.THREADS }
+                AnimatedVisibility(
+                    visible = dockExpanded,
+                    enter = fadeIn() + slideInVertically { it / 2 },
+                    exit = fadeOut() + slideOutVertically { it / 2 }
+                ) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        DockProvider("Instagram", provider == SocialProvider.INSTAGRAM) {
+                            provider = SocialProvider.INSTAGRAM
+                            dockExpanded = false
+                        }
+                        DockProvider("Threads", provider == SocialProvider.THREADS) {
+                            provider = SocialProvider.THREADS
+                            dockExpanded = false
+                        }
+                    }
+                }
+                FilledIconButton(
+                    onClick = { dockExpanded = !dockExpanded },
+                    modifier = Modifier.size(44.dp),
+                    shape = CircleShape,
+                    colors = IconButtonDefaults.filledIconButtonColors(
+                        containerColor = Burgundy,
+                        contentColor = Color.White
+                    )
+                ) {
+                    Text("↔", style = MaterialTheme.typography.titleLarge, color = Color.White)
+                }
             }
         }
     }
 
-    if (showMuteDialog) {
+    selectedStoryUser?.let { username ->
+        val isMuted = username in mutedUsers
         AlertDialog(
-            onDismissRequest = { showMuteDialog = false },
-            title = { Text("Hide Story rings") },
+            onDismissRequest = { selectedStoryUser = null },
+            title = { Text(if (isMuted) "Unmute story?" else "Mute this story?") },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("Add Instagram usernames. This preference stays on this device and only hides matching Story tiles inside Doom Scroll.")
-                    OutlinedTextField(
-                        value = usernameInput,
-                        onValueChange = { usernameInput = it },
-                        singleLine = true,
-                        label = { Text("Instagram username") },
-                        placeholder = { Text("username") }
-                    )
-                    Button(
-                        onClick = {
-                            val name = usernameInput.trim().removePrefix("@").lowercase()
-                            if (name.matches(Regex("[a-z0-9._]{1,30}"))) {
-                                mutedUsers = mutedUsers + name
-                                prefs.edit().putStringSet(MUTED_KEY, mutedUsers.toMutableSet()).apply()
-                                browserHost?.setMutedUsernames(mutedUsers)
-                                usernameInput = ""
-                            }
-                        },
-                        enabled = usernameInput.trim().removePrefix("@").matches(Regex("[A-Za-z0-9._]{1,30}"))
-                    ) { Text("Add username") }
-                    if (mutedUsers.isNotEmpty()) {
-                        Text("Muted locally", style = MaterialTheme.typography.titleSmall)
-                        LazyColumn(Modifier.heightIn(max = 180.dp)) {
-                            items(mutedUsers.sorted()) { name ->
-                                Row(
-                                    Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-                                ) {
-                                    Text("@$name")
-                                    TextButton(onClick = {
-                                        mutedUsers = mutedUsers - name
-                                        prefs.edit().putStringSet(MUTED_KEY, mutedUsers).apply()
-                                        browserHost?.setMutedUsernames(mutedUsers)
-                                    }) { Text("Remove") }
-                                }
-                            }
-                        }
-                    }
-                }
+                Text(
+                    if (isMuted) "Stories from @$username will appear again inside Doom Scroll."
+                    else "Hide @$username's Story from the Story tray inside Doom Scroll. This does not unfollow or change the Instagram account."
+                )
             },
             confirmButton = {
-                TextButton(onClick = { showMuteDialog = false }) { Text("Done") }
+                TextButton(onClick = {
+                    mutedUsers = if (isMuted) mutedUsers - username else mutedUsers + username
+                    prefs.edit().putStringSet(MUTED_KEY, mutedUsers.toMutableSet()).apply()
+                    browserHost?.setMutedUsernames(mutedUsers)
+                    selectedStoryUser = null
+                }) { Text(if (isMuted) "Unmute" else "Mute") }
+            },
+            dismissButton = {
+                TextButton(onClick = { selectedStoryUser = null }) { Text("Cancel") }
             }
         )
     }
 }
 
 @Composable
-private fun ProviderTab(
-    label: String,
-    selected: Boolean,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit
-) {
+private fun DockProvider(label: String, selected: Boolean, onClick: () -> Unit) {
     if (selected) {
-        Button(onClick = onClick, modifier = modifier, shape = RoundedCornerShape(14.dp)) {
-            Text(label)
-        }
+        Button(
+            onClick = onClick,
+            shape = RoundedCornerShape(22.dp),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp)
+        ) { Text(label) }
     } else {
-        OutlinedButton(onClick = onClick, modifier = modifier, shape = RoundedCornerShape(14.dp)) {
-            Text(label)
-        }
+        OutlinedButton(
+            onClick = onClick,
+            shape = RoundedCornerShape(22.dp),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp)
+        ) { Text(label) }
     }
 }
