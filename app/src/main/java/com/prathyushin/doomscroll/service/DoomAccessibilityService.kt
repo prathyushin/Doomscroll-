@@ -15,19 +15,20 @@ import android.widget.TextView
 import com.prathyushin.doomscroll.data.LocalPolicyStore
 import com.prathyushin.doomscroll.model.BehaviorSnapshot
 import com.prathyushin.doomscroll.policy.PolicyEngine
+import com.prathyushin.doomscroll.policy.ReopenTracker
 import java.util.ArrayDeque
 
 class DoomAccessibilityService : AccessibilityService() {
     private lateinit var store: LocalPolicyStore
     private val handler = Handler(Looper.getMainLooper())
     private val scrollEvents = ArrayDeque<Long>()
+    private val reopenTracker = ReopenTracker()
 
     private var activePackage: String? = null
     private var sessionStartedAt = 0L
     private var scrollCount = 0
-    private var reopenCount = 0
+    private var highScrollStartedAt = 0L
     private var lastInterventionAt = 0L
-    private var lastProtectedExitAt = 0L
     private var overlay: View? = null
 
     override fun onServiceConnected() {
@@ -37,24 +38,26 @@ class DoomAccessibilityService : AccessibilityService() {
 
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
         val packageName = event.packageName?.toString() ?: return
-        if (packageName == packageNameOfService()) return
+        val now = SystemClock.elapsedRealtime()
 
+        // Treat Doom Scroll and every unprotected app as an exit from the
+        // protected-app group. This also makes returning from Doom Scroll count.
         if (!store.isEnabled(packageName)) {
-            if (packageName == activePackage) {
-                lastProtectedExitAt = SystemClock.elapsedRealtime()
-                resetSession()
+            if (activePackage != null) {
+                reopenTracker.onProtectedExit(now)
+                resetActiveSession()
             }
             return
         }
 
-        val now = SystemClock.elapsedRealtime()
         if (packageName != activePackage) {
-            if (activePackage != null && now - lastProtectedExitAt <= 30_000L) {
-                reopenCount++
+            if (activePackage == null) {
+                reopenTracker.onProtectedEntry(now)
             }
             activePackage = packageName
             sessionStartedAt = now
             scrollCount = 0
+            highScrollStartedAt = 0L
             scrollEvents.clear()
             removeOverlay()
             return
@@ -63,14 +66,24 @@ class DoomAccessibilityService : AccessibilityService() {
         if (event.eventType == AccessibilityEvent.TYPE_VIEW_SCROLLED) {
             scrollCount++
             scrollEvents.addLast(now)
-            trimScrollWindow(now)
+        }
+
+        trimScrollWindow(now)
+        val scrollRatePerMinute = scrollEvents.size.toDouble()
+        if (scrollRatePerMinute >= SCROLL_RATE_THRESHOLD_PER_MINUTE) {
+            if (highScrollStartedAt == 0L) highScrollStartedAt = now
+        } else {
+            highScrollStartedAt = 0L
         }
 
         if (now - lastInterventionAt < store.cooldownMinutes() * 60_000L) return
         if (overlay != null) return
 
-        val sessionSeconds = ((now - sessionStartedAt) / 1000L).coerceAtLeast(0)
-        val scrollRatePerMinute = currentScrollRatePerMinute(now)
+        val sessionSeconds = ((now - sessionStartedAt) / 1000L).coerceAtLeast(0L)
+        val sustainedScrollSeconds =
+            if (highScrollStartedAt == 0L) 0L
+            else ((now - highScrollStartedAt) / 1000L).coerceAtLeast(0L)
+
         val decision = PolicyEngine(
             sessionLimitSeconds = store.sessionLimitMinutes() * 60L
         ).evaluate(
@@ -79,7 +92,8 @@ class DoomAccessibilityService : AccessibilityService() {
                 sessionSeconds = sessionSeconds,
                 scrolls = scrollCount,
                 scrollRatePerMinute = scrollRatePerMinute,
-                reopenCount = reopenCount
+                reopenCount = reopenTracker.count(now),
+                sustainedScrollSeconds = sustainedScrollSeconds
             )
         )
 
@@ -91,22 +105,17 @@ class DoomAccessibilityService : AccessibilityService() {
     }
 
     private fun trimScrollWindow(now: Long) {
-        val cutoff = now - 5_000L
+        val cutoff = now - SCROLL_WINDOW_MILLIS
         while (scrollEvents.isNotEmpty() && scrollEvents.first() < cutoff) {
             scrollEvents.removeFirst()
         }
     }
 
-    private fun currentScrollRatePerMinute(now: Long): Double {
-        trimScrollWindow(now)
-        return scrollEvents.size * 12.0
-    }
-
-    private fun resetSession() {
+    private fun resetActiveSession() {
         activePackage = null
         sessionStartedAt = 0L
         scrollCount = 0
-        reopenCount = 0
+        highScrollStartedAt = 0L
         scrollEvents.clear()
         removeOverlay()
     }
@@ -114,7 +123,7 @@ class DoomAccessibilityService : AccessibilityService() {
     private fun showIntervention(reason: String) {
         if (overlay != null) return
         val windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
-        var remaining = 15
+        var remaining = PAUSE_SECONDS
 
         val panel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -190,12 +199,16 @@ class DoomAccessibilityService : AccessibilityService() {
         overlay = null
     }
 
-    private fun packageNameOfService() = packageName
-
     override fun onInterrupt() = Unit
 
     override fun onDestroy() {
         removeOverlay()
         super.onDestroy()
+    }
+
+    private companion object {
+        const val SCROLL_WINDOW_MILLIS = 60_000L
+        const val SCROLL_RATE_THRESHOLD_PER_MINUTE = 12.0
+        const val PAUSE_SECONDS = 15
     }
 }
