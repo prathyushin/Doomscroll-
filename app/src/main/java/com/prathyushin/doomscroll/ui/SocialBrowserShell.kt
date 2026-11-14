@@ -115,7 +115,7 @@ fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
                             val name = usernameInput.trim().removePrefix("@").lowercase()
                             if (name.matches(Regex("[a-z0-9._]{1,30}"))) {
                                 mutedUsers = mutedUsers + name
-                                prefs.edit().putStringSet(MUTED_KEY, mutedUsers).apply()
+                                prefs.edit().putStringSet(MUTED_KEY, mutedUsers.toMutableSet()).apply()
                                 browserHost?.setMutedUsernames(mutedUsers)
                                 usernameInput = ""
                             }
