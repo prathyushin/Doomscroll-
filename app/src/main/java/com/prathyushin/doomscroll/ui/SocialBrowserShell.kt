@@ -101,7 +101,6 @@ fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
             ) {
             Row(
                 modifier = Modifier
-                    .align(Alignment.BottomCenter)
                     .padding(bottom = 22.dp)
                     .shadow(10.dp, RoundedCornerShape(28.dp))
                     .background(Color(0xFFFDF9F4), RoundedCornerShape(28.dp))
