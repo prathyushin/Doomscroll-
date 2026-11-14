@@ -290,7 +290,7 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
 
               function scheduleStoryUpdate() {
                 if (window.__doomScrollStoryTimer) clearTimeout(window.__doomScrollStoryTimer);
-                window.__doomScrollStoryTimer = setTimeout(updateMutedStories, 140);
+                window.__doomScrollStoryTimer = setTimeout(attachStoryTrayObserver, 140);
               }
 
               function attachStoryTrayObserver() {
