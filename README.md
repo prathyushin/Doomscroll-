@@ -4,16 +4,17 @@
 
 Doom Scroll is an Android app that places the official Instagram and Threads websites in separate WebViews inside one app shell. It aims to make intentional social use easier while reducing default access to selected algorithmic destinations.
 
-> **Repository status (15 November 2026):** The `v1.2.0-shared-login-media` branch is still a draft release candidate. A new Android media-picker and runtime-permission integration has been committed and requires a fresh CI run plus real-device testing. The public GitHub Releases page still publishes **v1.1.0**; v1.2.0 is not yet a published release.
+> **Repository status (15 November 2026):** **Doom Scroll v1.2.0 is now published** as a public Android device-testing release. The build and automated tests passed in GitHub Actions. Real-device testing of Meta login, media uploads, voice notes, feed filtering, and notification filtering is still required; this is not a production-signed Play Store package.
 
 ## Downloads
 
-- **[Latest published Android release](https://github.com/prathyushin/Doomscroll-/releases/latest)** — currently v1.1.0.
+- **[Download Doom Scroll v1.2.0 APK](https://github.com/prathyushin/Doomscroll-/releases/download/v1.2.0/DoomScroll-v1.2.0.apk)** — public device-testing build.
+- [Latest published release and notes](https://github.com/prathyushin/Doomscroll-/releases/latest) — v1.2.0.
 - [All published releases](https://github.com/prathyushin/Doomscroll-/releases)
-- [v1.2.0 draft pull request](https://github.com/prathyushin/Doomscroll-/pull/5)
+- [v1.2.0 implementation pull request](https://github.com/prathyushin/Doomscroll-/pull/5)
 - [v1.2.0 usage and notification feature specification](https://github.com/prathyushin/Doomscroll-/issues/6)
 
-Only install APKs published under this repository's Releases page. The v1.2.0 CI artifact is a build artifact, not a published release.
+Install the APK from the v1.2.0 release asset above. This is a debug-signed device-testing build, not a production-signed Play Store package.
 
 ## Verified v1.2.0 candidate scope
 
