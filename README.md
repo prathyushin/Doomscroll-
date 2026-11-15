@@ -57,18 +57,16 @@ When enabled, the service keeps notifications whose visible text matches a local
 
 ## Build and validation status
 
-The v1.2.0 Android workflow on GitHub Actions has completed successfully for the current candidate commit:
+The latest Android workflow for the candidate's media, usage, feed, and notification changes is running:
 
 - Unit tests: **passed**.
-- Debug APK assembly: **passed**.
-- Release APK assembly: **passed**.
-- Release AAB assembly: **passed**.
-- Optional release signing: **skipped** because signing secrets were not available to that run.
-- Installable debug APK artifact: uploaded by the workflow.
+- Debug APK assembly: **in progress** at the time of this README update.
+- Release APK and AAB assembly: **pending** in that workflow.
+- Optional release signing: not configured for this candidate; the public device-testing release uses a debug-signed APK.
 
-[View the v1.2.0 Android build workflow](https://github.com/prathyushin/Doomscroll-/actions/workflows/android.yml).
+[View the latest Android build workflow](https://github.com/prathyushin/Doomscroll-/actions/runs/43677500679).
 
-A successful CI build confirms compilation and automated tests only. It does not replace real-device checks for login, CAPTCHA, DMs, Story navigation, Reel fullscreen, dock behavior, Android Back handling, or long-duration stability. No production-signed Play Store package is claimed.
+A successful CI build confirms compilation and automated tests only. It does not replace real-device checks for login, photo/video picker, Story publishing, voice notes, feed behavior, notification filtering, usage timing, fullscreen, Android Back handling, or dock behavior. No production-signed Play Store package is claimed.
 
 ## Important limitations
 
