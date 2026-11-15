@@ -33,8 +33,9 @@ The current v1.2.0 branch includes:
 - **Android media chooser bridge (new, pending verification):** WebView file-chooser requests are forwarded to Android's system document/photo picker, with support for the website's requested selection mode and MIME types.
 - **Just-in-time media permissions (new, pending verification):** trusted Instagram/Threads pages can request camera or microphone access through Android runtime permission prompts. These permissions are not requested at app startup; only requested WebView capture resources are eligible for grant.
 - **Following-feed preference and recommendation suppression (new, pending verification):** where Instagram/Threads expose a clear “Following” tab, the WebView attempts to select it. Explicitly labelled suggested/recommended post cards are hidden on a best-effort basis.
+- **Local Usage Activity (new, pending verification):** records per-platform foreground time, combined daily totals, session counts, average session duration, and a seven-day history. Tracking pauses when the app is not resumed and records only the currently selected platform. Data stays in local app preferences.
 
-The media bridge and feed controls are code-integrated but have not yet been verified on a physical Android device. Photo/video uploads, Stories, voice notes, and camera capture remain dependent on Meta's current web implementation and require end-to-end testing before being described as fully working. The Following-feed selection and recommendation suppression are heuristic website integrations: they cannot guarantee a strictly chronological feed or remove every recommendation if Meta changes its markup or does not expose the relevant control.
+The media bridge, feed controls, and local Usage Activity are code-integrated but have not yet been verified on a physical Android device. Photo/video uploads, Stories, voice notes, and camera capture remain dependent on Meta's current web implementation and require end-to-end testing before being described as fully working. The Following-feed selection and recommendation suppression are heuristic website integrations: they cannot guarantee a strictly chronological feed or remove every recommendation if Meta changes its markup or does not expose the relevant control.
 
 These controls operate on the website UI and routes exposed to the embedded WebView. They are not guaranteed to survive changes to Meta's websites.
 
@@ -44,9 +45,7 @@ The following requested features are specified in [issue #6](https://github.com/
 
 ### Usage Activity and usage limits
 
-- No Instagram/Threads per-tab usage timer or combined usage dashboard is currently present.
-- No daily/weekly usage history, session count, or average session duration is currently recorded.
-- No configurable usage limit is currently implemented.
+- A configurable usage limit is not currently implemented. The Usage Activity screen is informational and does not interrupt browsing with limit banners or countdowns.
 - The planned usage-limit controls belong only in **Settings** or **Usage Activity**. They must not appear as repeated banners, countdowns, or interruptions during normal browsing.
 - When implemented, measurement must count only the visible active tab while Doom Scroll is foregrounded, pause when backgrounded or the screen is off, and store the data locally by default. It must be labelled as usage **inside Doom Scroll**, not usage in the separate official Instagram or Threads apps.
 
@@ -98,7 +97,7 @@ The installable debug APK is generated at `app/build/outputs/apk/debug/app-debug
 - Sign-in takes place on the official Instagram or Threads website inside the WebView.
 - Doom Scroll does not request Meta API keys or provider passwords.
 - Story mute preferences are stored locally on the device.
-- The v1.2.0 candidate does not collect usage analytics or send behavioral telemetry to a server.
+- Usage totals are stored locally in app preferences; the candidate does not send behavioral telemetry to a server.
 - No private Meta endpoints, undocumented notification APIs, or feed scraping are used.
 - WebView file/content access is restricted and mixed content is disabled. Picker-returned content URIs are handled through Android's system chooser rather than enabling broad WebView file/content access.
 - Camera and microphone permissions are declared but are requested only in response to a trusted platform page's capture request. No notification-listener or usage-access permission is requested.
