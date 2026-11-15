@@ -57,6 +57,7 @@ jobs:
           - Just-in-time Android camera/microphone permission bridge for trusted platform origins (pending device verification)
           - Best-effort Following-feed selection and explicit recommendation-card suppression (website markup dependent)
           - Local Usage Activity: per-platform foreground totals, combined daily time, session counts, average session duration, and seven-day history
+          - Optional important-only notification filtering for separately installed official apps, with per-platform toggles and explicit Android notification-access consent
           - Instagram Stories and Reels remain in the original web viewer
           - Fullscreen support when the web player requests it
           - External web links open in the system browser
@@ -64,7 +65,7 @@ jobs:
           NOT INCLUDED IN THIS BUILD
           - Configurable usage limits or in-feed limit reminders
           - Guaranteed removal of every recommendation or guaranteed chronological ordering where Meta does not expose a Following feed
-          - Native important-only event notifications; WebView does not provide Meta's official-app push events
+          - Push notifications originating from the embedded WebViews; the optional listener can only filter notifications posted by separately installed official apps
 
           IMPORTANT
           This APK is signed with Android's standard debug key for public evaluation and device testing. It is not a production-signed Play Store release. The official Instagram and Threads websites control login, site markup, and feature availability, so compatibility can change.
