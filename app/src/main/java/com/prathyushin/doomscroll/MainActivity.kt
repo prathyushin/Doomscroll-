@@ -74,16 +74,16 @@ class MainActivity : ComponentActivity() {
                         true
                     } catch (_: android.content.ActivityNotFoundException) {
                         pendingFileCallback = null
-                        callback.onReceiveValue(null)
                         false
                     } catch (_: SecurityException) {
                         pendingFileCallback = null
-                        callback.onReceiveValue(null)
                         false
                     }
                 }
                 host.setOnWebPermissionRequested { request ->
-                    pendingWebPermission?.deny()
+                    pendingWebPermission?.let { previous ->
+                        browserHost?.completeWebPermissionRequest(previous, emptyArray())
+                    }
                     val requestedPermissions = request.resources.mapNotNull { resource ->
                         when (resource) {
                             PermissionRequest.RESOURCE_AUDIO_CAPTURE -> Manifest.permission.RECORD_AUDIO
