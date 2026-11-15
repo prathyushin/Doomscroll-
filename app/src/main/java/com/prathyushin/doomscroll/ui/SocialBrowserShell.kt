@@ -199,7 +199,7 @@ fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
             title = { Text("Doom Scroll") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("Built by Pranav & Pratyush", fontWeight = FontWeight.Medium)
+                    Text("Built by Pranav and Prathyush", fontWeight = FontWeight.Medium)
                     Text(
                         "An independent project.",
                         style = MaterialTheme.typography.bodySmall,
