@@ -1,6 +1,8 @@
 package com.prathyushin.doomscroll.ui
 
 import android.content.Context
+import android.content.Intent
+import android.provider.Settings
 import android.os.SystemClock
 import org.json.JSONObject
 import java.time.LocalDate
@@ -63,6 +65,14 @@ fun DoomScrollApp(isAppForeground: Boolean, onBrowserHostReady: (SocialBrowserHo
     var isFullscreen by remember { mutableStateOf(false) }
     var showUsage by remember { mutableStateOf(false) }
     var usageData by remember { mutableStateOf(readUsageData(prefs)) }
+    var notificationFilterEnabled by remember { mutableStateOf(prefs.getBoolean("notification_filter_enabled", false)) }
+    var instagramNotificationsEnabled by remember { mutableStateOf(prefs.getBoolean("notification_filter_instagram", true)) }
+    var threadsNotificationsEnabled by remember { mutableStateOf(prefs.getBoolean("notification_filter_threads", true)) }
+    var notificationAccessEnabled by remember { mutableStateOf(isNotificationAccessEnabled(context)) }
+
+    LaunchedEffect(isAppForeground) {
+        if (isAppForeground) notificationAccessEnabled = isNotificationAccessEnabled(context)
+    }
 
     LaunchedEffect(provider, isAppForeground) {
         if (!isAppForeground) return@LaunchedEffect
@@ -244,6 +254,36 @@ fun DoomScrollApp(isAppForeground: Boolean, onBrowserHostReady: (SocialBrowserHo
                     usageData.week.forEach { day ->
                         Text("${day.first}  ${formatUsageDuration(day.second)}")
                     }
+                    Divider(color = TextWhite.copy(alpha = 0.15f))
+                    Text("Important-only notifications", fontWeight = FontWeight.SemiBold)
+                    Text("Optional filter for notifications posted by the separate official apps. It does not receive notifications from the embedded websites.", style = MaterialTheme.typography.bodySmall, color = TextWhite.copy(alpha = 0.7f))
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                        Text("Enable filter")
+                        Switch(checked = notificationFilterEnabled, onCheckedChange = {
+                            notificationFilterEnabled = it
+                            prefs.edit().putBoolean("notification_filter_enabled", it).apply()
+                        })
+                    }
+                    if (notificationFilterEnabled) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                            Text("Instagram")
+                            Switch(checked = instagramNotificationsEnabled, onCheckedChange = {
+                                instagramNotificationsEnabled = it
+                                prefs.edit().putBoolean("notification_filter_instagram", it).apply()
+                            })
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                            Text("Threads")
+                            Switch(checked = threadsNotificationsEnabled, onCheckedChange = {
+                                threadsNotificationsEnabled = it
+                                prefs.edit().putBoolean("notification_filter_threads", it).apply()
+                            })
+                        }
+                        Text(if (notificationAccessEnabled) "Android notification access is enabled." else "Android notification access is not enabled yet.", style = MaterialTheme.typography.bodySmall, color = TextWhite.copy(alpha = 0.7f))
+                        TextButton(onClick = {
+                            runCatching { context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) }
+                        }) { Text("Open notification access settings") }
+                    }
                     Text("These totals measure Doom Scroll foreground time, not usage in the separate Instagram or Threads apps.", style = MaterialTheme.typography.bodySmall, color = TextWhite.copy(alpha = 0.7f))
                 }
             },
@@ -277,6 +317,12 @@ fun DoomScrollApp(isAppForeground: Boolean, onBrowserHostReady: (SocialBrowserHo
     }
 }
 
+
+
+private fun isNotificationAccessEnabled(context: Context): Boolean {
+    val enabled = Settings.Secure.getString(context.contentResolver, "enabled_notification_listeners").orEmpty()
+    return enabled.split(':').any { component -> component.contains(context.packageName) }
+}
 
 private data class UsageData(
     val instagramTodayMs: Long,
