@@ -57,16 +57,18 @@ When enabled, the service keeps notifications whose visible text matches a local
 
 ## Build and validation status
 
-The latest Android workflow for the candidate's media, usage, feed, and notification changes is running:
+The latest Android workflow for the candidate's media, usage, feed, and notification changes completed successfully:
 
 - Unit tests: **passed**.
-- Debug APK assembly: **in progress** at the time of this README update.
-- Release APK and AAB assembly: **pending** in that workflow.
-- Optional release signing: not configured for this candidate; the public device-testing release uses a debug-signed APK.
+- Debug APK assembly: **passed**.
+- Release APK assembly: **passed**.
+- Release AAB assembly: **passed**.
+- Optional release signing: **skipped** because signing secrets are not configured.
+- CI artifact: **DoomScroll-v1.2.0-build** (contains the installable debug APK and release build outputs).
 
-[View the latest Android build workflow](https://github.com/prathyushin/Doomscroll-/actions/runs/43677500679).
+[View successful Android build #43677500679](https://github.com/prathyushin/Doomscroll-/actions/runs/43677500679).
 
-A successful CI build confirms compilation and automated tests only. It does not replace real-device checks for login, photo/video picker, Story publishing, voice notes, feed behavior, notification filtering, usage timing, fullscreen, Android Back handling, or dock behavior. No production-signed Play Store package is claimed.
+A successful CI build confirms compilation and automated tests only. It does not replace real-device checks for login, photo/video picker, Story publishing, voice notes, feed behavior, notification filtering, usage timing, fullscreen, Android Back handling, or dock behavior. The public device-testing package is debug-signed, not a production-signed Play Store package.
 
 ## Important limitations
 
