@@ -41,7 +41,7 @@ jobs:
         run: |
           TAG="v1.2.1"
           TITLE="Doom Scroll v1.2.1"
-          NOTES="Doom Scroll v1.2.1 — privacy-minimized public Android device-testing release candidate.
+          NOTES="Doom Scroll v1.2.1 — privacy-minimized public Android device-testing release.
 
           DOWNLOAD: Download DoomScroll-v1.2.1.apk from the Assets section below.
 
@@ -50,32 +50,31 @@ jobs:
           - Persistent supported website sessions
           - Instagram Explore and Reels-feed restrictions
           - DM-origin single-Reel handling
-          - Long-press Instagram Story tiles to mute/unmute locally
+          - Long-press Instagram Story tiles to mute/unmute locally for the current session
           - Floating auto-hiding glass-style app switcher
           - Pure black dark interface
           - Android system picker bridge for website-requested photo/video selection (pending device verification)
           - Just-in-time Android camera/microphone permission bridge for trusted platform origins (pending device verification)
           - Best-effort Following-feed selection and explicit recommendation-card suppression (website markup dependent)
-                              - Instagram Stories and Reels remain in the original web viewer
+          - Instagram Stories and Reels remain in the original web viewer
           - Fullscreen support when the web player requests it
           - External web links open in the system browser
 
-          NOT INCLUDED IN THIS BUILD
-          - Configurable usage limits or in-feed limit reminders
-          - Guaranteed removal of every recommendation or guaranteed chronological ordering where Meta does not expose a Following feed
-          - Push notifications originating from the embedded WebViews; the optional listener can only filter notifications posted by separately installed official apps
+          REMOVED IN THIS VERSION
+          - App Usage Activity tracking and persisted usage history
+          - Notification-listener service and notification-content access
 
-          PRIVACY
-          - Instagram/Threads login sessions are maintained by Android WebView cookies stored locally on the device; these are required for sign-in persistence.
-          - Doom Scroll does not upload login cookies, passwords, notification contents, or usage data to a Doom Scroll server.
-          - Camera/microphone are requested only after a trusted Instagram/Threads page initiates a capture request.
-          - Story mute choices last only for the current app session and are not persisted.
+          PRIVACY NOTES
+          - Instagram/Threads login sessions remain in Android WebView cookies and site storage on the device; these are needed for sign-in persistence.
+          - Story mute choices are session-only and are not persisted.
+          - Camera/microphone permissions are requested only after a trusted Instagram/Threads page initiates a capture request.
+          - Meta websites continue to control their own account, cookie, and website-data processing.
 
           IMPORTANT
-          This APK is signed with Android's standard debug key for public evaluation and device testing. It is not a production-signed Play Store release. The official Instagram and Threads websites control login, site markup, and feature availability, so compatibility can change.
+          This APK is signed with Android's standard debug key for public evaluation and device testing. It is not a production-signed Play Store release. The official Instagram and Threads websites control login, site markup, and feature availability, so compatibility can change. Device verification is still recommended.
 
           SOURCE CODE
-          https://github.com/prathyushin/Doomscroll-/tree/v1.2.1-shared-login-media
+          https://github.com/prathyushin/Doomscroll-/tree/v1.2.1-privacy-hardening
 
           BUG REPORTS
           https://github.com/prathyushin/Doomscroll-/issues/new?template=bug_report.yml"
