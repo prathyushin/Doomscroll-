@@ -474,6 +474,46 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
                 });
               }
 
+              function selectFollowingFeed() {
+                if (window.__doomScrollFollowingFeedSelected) return;
+                const candidates = Array.from(document.querySelectorAll('header [role="tab"], header button, header a[role="tab"], [role="tab"]'));
+                const following = candidates.find(function(node) {
+                  return (node.innerText || node.getAttribute('aria-label') || '').trim().replace(/\\s+/g, ' ').toLowerCase() === 'following';
+                });
+                if (following && following.getAttribute('aria-selected') !== 'true') {
+                  following.click();
+                  window.__doomScrollFollowingFeedSelected = true;
+                }
+              }
+
+              function hideSuggestedPosts() {
+                document.querySelectorAll('article,[role="article"]').forEach(function(article) {
+                  const text = (article.innerText || '').toLowerCase();
+                  if (text.includes('suggested for you') || text.includes('suggested posts') ||
+                      text.includes('because you follow') || text.includes('recommended for you')) {
+                    article.style.setProperty('display', 'none', 'important');
+                  }
+                });
+              }
+
+              function installFeedCleanup() {
+                selectFollowingFeed();
+                hideSuggestedPosts();
+                if (!window.__doomScrollFeedCleanupObserver) {
+                  let timer = null;
+                  window.__doomScrollFeedCleanupObserver = new MutationObserver(function() {
+                    if (timer) clearTimeout(timer);
+                    timer = setTimeout(function() {
+                      selectFollowingFeed();
+                      hideSuggestedPosts();
+                    }, 300);
+                  });
+                  window.__doomScrollFeedCleanupObserver.observe(document.documentElement, {
+                    childList: true, subtree: true
+                  });
+                }
+              }
+
               function getStoryTray() {
                 const candidates = Array.from(document.querySelectorAll('[aria-label*="stor" i]'));
                 for (const candidate of candidates) {
@@ -569,6 +609,7 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
               }
 
               hideTrapNavigation();
+              installFeedCleanup();
               attachStoryTrayObserver();
               const storyDiscoveryRoot = document.querySelector('header,[role="banner"]');
               if (storyDiscoveryRoot && !window.__doomScrollStoryDiscoveryObserver) {
@@ -658,6 +699,26 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
                 document.documentElement.appendChild(style);
               }
               style.textContent = '.doom-scroll-threads-for-you { display:none !important; }';
+              function selectFollowingTab() {
+                if (window.__doomScrollThreadsFollowingSelected) return;
+                const candidates = Array.from(document.querySelectorAll('[role="tab"],header button,header a[role="tab"]'));
+                const following = candidates.find(function(node) {
+                  return (node.innerText || node.getAttribute('aria-label') || '').trim().replace(/\\s+/g, ' ').toLowerCase() === 'following';
+                });
+                if (following && following.getAttribute('aria-selected') !== 'true') {
+                  following.click();
+                  window.__doomScrollThreadsFollowingSelected = true;
+                }
+              }
+              function hideSuggestedThreads() {
+                document.querySelectorAll('article,[role="article"]').forEach(function(article) {
+                  const text = (article.innerText || '').toLowerCase();
+                  if (text.includes('suggested for you') || text.includes('suggested posts') ||
+                      text.includes('recommended for you')) {
+                    article.style.setProperty('display', 'none', 'important');
+                  }
+                });
+              }
               function hideForYouTab() {
                 document.querySelectorAll('a[href],button,[role="tab"]').forEach(function(node) {
                   const label = ((node.getAttribute('aria-label') || '') + ' ' +
@@ -669,11 +730,17 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
                 });
               }
               hideForYouTab();
+              selectFollowingTab();
+              hideSuggestedThreads();
               if (!window.__doomScrollThreadsObserver) {
                 let timer = null;
                 window.__doomScrollThreadsObserver = new MutationObserver(function() {
                   if (timer) clearTimeout(timer);
-                  timer = setTimeout(hideForYouTab, 350);
+                  timer = setTimeout(function() {
+                    hideForYouTab();
+                    selectFollowingTab();
+                    hideSuggestedThreads();
+                  }, 350);
                 });
                 window.__doomScrollThreadsObserver.observe(document.documentElement, {
                   childList: true, subtree: true
