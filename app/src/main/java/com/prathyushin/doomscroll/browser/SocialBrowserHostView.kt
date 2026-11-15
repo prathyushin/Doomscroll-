@@ -35,6 +35,9 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
     private var onStoryLongPress: ((String) -> Unit)? = null
     private var onMediaViewerChanged: ((Boolean) -> Unit)? = null
     private var onFullscreenChanged: ((Boolean) -> Unit)? = null
+    private var onFileChooserRequested: ((android.webkit.ValueCallback<Array<Uri>>, WebChromeClient.FileChooserParams) -> Boolean)? = null
+    private var onWebPermissionRequested: ((android.webkit.PermissionRequest) -> Unit)? = null
+    private val pendingPermissionRequests = mutableMapOf<android.webkit.PermissionRequest, WebView>()
     private var fullscreenView: View? = null
     private var fullscreenCallback: WebChromeClient.CustomViewCallback? = null
     private val popupViews = mutableSetOf<WebView>()
@@ -63,6 +66,26 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
 
     fun setOnFullscreenChanged(listener: (Boolean) -> Unit) {
         onFullscreenChanged = listener
+    }
+
+    fun setOnFileChooserRequested(listener: (android.webkit.ValueCallback<Array<Uri>>, WebChromeClient.FileChooserParams) -> Boolean) {
+        onFileChooserRequested = listener
+    }
+
+    fun setOnWebPermissionRequested(listener: (android.webkit.PermissionRequest) -> Unit) {
+        onWebPermissionRequested = listener
+    }
+
+    /** Completes a media permission only while its original trusted page is still active. */
+    fun completeWebPermissionRequest(request: android.webkit.PermissionRequest, grantedResources: Array<String>) {
+        val source = pendingPermissionRequests.remove(request) ?: return
+        val currentOrigin = Uri.parse(source.url.orEmpty()).let { Uri.Builder().scheme(it.scheme).encodedAuthority(it.encodedAuthority).build().toString() }
+        val requestedOrigin = request.origin.let { Uri.Builder().scheme(it.scheme).encodedAuthority(it.encodedAuthority).build().toString() }
+        if (currentOrigin != requestedOrigin || grantedResources.isEmpty()) {
+            runCatching { request.deny() }
+            return
+        }
+        runCatching { request.grant(grantedResources) }
     }
 
     fun exitFullscreen() {
@@ -125,6 +148,10 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
             view.destroy()
         }
         popupViews.clear()
+        pendingPermissionRequests.keys.toList().forEach { runCatching { it.deny() } }
+        pendingPermissionRequests.clear()
+        onFileChooserRequested = null
+        onWebPermissionRequested = null
         removeAllViews()
         hideFullscreenView()
         onCanGoBackChanged = null
@@ -136,6 +163,17 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
     private fun currentView(): WebView =
         if (activeProvider == SocialProvider.INSTAGRAM) instagramView else threadsView
 
+    private fun currentViewFor(provider: SocialProvider): WebView =
+        if (provider == SocialProvider.INSTAGRAM) instagramView else threadsView
+
+    private fun isTrustedMetaOrigin(uri: Uri): Boolean {
+        if (!uri.scheme.equals("https", ignoreCase = true)) return false
+        val host = uri.host?.lowercase().orEmpty()
+        return host == "instagram.com" || host.endsWith(".instagram.com") ||
+            host == "threads.com" || host.endsWith(".threads.com") ||
+            host == "threads.net" || host.endsWith(".threads.net")
+    }
+
     private fun notifyBackState() {
         onCanGoBackChanged?.invoke(!destroyed && currentView().canGoBack())
     }
@@ -145,6 +183,41 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
             setBackgroundColor(Color.BLACK)
             configureWebView(this)
             webChromeClient = object : WebChromeClient() {
+                override fun onShowFileChooser(
+                    webView: WebView,
+                    filePathCallback: android.webkit.ValueCallback<Array<Uri>>,
+                    fileChooserParams: WebChromeClient.FileChooserParams
+                ): Boolean {
+                    val handled = onFileChooserRequested?.invoke(filePathCallback, fileChooserParams) == true
+                    if (!handled) filePathCallback.onReceiveValue(null)
+                    return handled
+                }
+
+                override fun onPermissionRequest(request: android.webkit.PermissionRequest) {
+                    val origin = request.origin
+                    if (!isTrustedMetaOrigin(origin) || destroyed) {
+                        request.deny()
+                        return
+                    }
+                    val supported = request.resources.filter {
+                        it == android.webkit.PermissionRequest.RESOURCE_AUDIO_CAPTURE ||
+                            it == android.webkit.PermissionRequest.RESOURCE_VIDEO_CAPTURE
+                    }
+                    if (supported.isEmpty()) {
+                        request.deny()
+                        return
+                    }
+                    pendingPermissionRequests[request] = this@SocialBrowserHostView.currentViewFor(provider)
+                    onWebPermissionRequested?.invoke(request) ?: run {
+                        pendingPermissionRequests.remove(request)
+                        request.deny()
+                    }
+                }
+
+                override fun onPermissionRequestCanceled(request: android.webkit.PermissionRequest) {
+                    pendingPermissionRequests.remove(request)
+                }
+
                 override fun onJsPrompt(
                     view: WebView,
                     url: String,
