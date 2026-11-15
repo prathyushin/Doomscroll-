@@ -2,76 +2,108 @@
 
 **A calmer way to use Instagram and Threads.**
 
-Doom Scroll is an Android app that puts Instagram and Threads in one lightweight WebView shell while reducing access to algorithmic rabbit holes. The goal is simple: keep the social features people intentionally use—friends, Stories, posts, search, profiles and DMs—without making Reels and Explore the default destinations.
+Doom Scroll is an Android app that places the official Instagram and Threads websites in separate WebViews inside one app shell. It aims to make intentional social use easier while reducing default access to selected algorithmic destinations.
 
-> **Status:** Public v1.1.0 device-testing build. This project is actively developed. Platform website changes can affect compatibility.
+> **Repository status (15 November 2026):** The `v1.2.0-shared-login-media` branch is still a draft release candidate. A new Android media-picker and runtime-permission integration has been committed and requires a fresh CI run plus real-device testing. The public GitHub Releases page still publishes **v1.1.0**; v1.2.0 is not yet a published release.
 
-## Download
+## Downloads
 
-- **[Download the latest Android APK](https://github.com/prathyushin/Doomscroll-/releases/latest)**
-- [All releases and release notes](https://github.com/prathyushin/Doomscroll-/releases)
+- **[Latest published Android release](https://github.com/prathyushin/Doomscroll-/releases/latest)** — currently v1.1.0.
+- [All published releases](https://github.com/prathyushin/Doomscroll-/releases)
+- [v1.2.0 draft pull request](https://github.com/prathyushin/Doomscroll-/pull/5)
+- [v1.2.0 usage and notification feature specification](https://github.com/prathyushin/Doomscroll-/issues/6)
 
-Download the APK asset from the latest release, open it on your Android device, and follow Android's installation prompts. Only install builds published under this repository's Releases page.
+Only install APKs published under this repository's Releases page. The v1.2.0 CI artifact is a build artifact, not a published release.
 
-The first public APK is built with Android's standard debug signing key. It is suitable for evaluation and device testing, but it is **not a production-signed Play Store release**. Android may require you to approve installation of apps from the source you used. Do not disable device security protections to install it.
+## Verified v1.2.0 candidate scope
 
-## What it does
+The current v1.2.0 branch includes:
 
-- **Instagram + Threads:** two tabs in one Android app.
-- **Persistent sessions:** Android WebView CookieManager stores supported website session cookies.
-- **Less Explore and Reels:** Instagram Explore and Reels-feed routes are blocked, and matching navigation links are hidden where the website markup allows it.
-- **Intentional shared Reel access:** a singular Reel opened from a DM is treated as a one-item destination; vertical navigation to the next Reel is restricted on that route.
-- **Local Story muting:** save usernames locally and hide matching Story tiles/rings where the current Instagram page exposes identifiable Story-tray elements.
-- **External links:** supported web links open outside the app in the system browser.
+- **Instagram and Threads in one Android app**, each in its own WebView.
+- **Shared WebView CookieManager** to support Meta's shared sign-in behavior for linked accounts where Meta allows it. Separate sign-in remains possible when required.
+- **Pure-black dark interface** with a floating translucent glass-style app switcher.
+- **Auto-hiding dock** that can be revealed from the bottom edge; it hides during media viewing and fullscreen playback.
+- **Instagram Story muting:** long-press a Story tile to mute or unmute that account locally inside Doom Scroll.
+- **Story and Reel viewing:** preserve the original website viewer and its navigation.
+- **Fullscreen WebView media support** when the website requests a custom fullscreen view.
+- **Instagram Explore and Reels-feed restrictions**, including best-effort route and navigation controls.
+- **DM-origin single-Reel handling** to restrict onward Reel-feed navigation from that entry point.
+- **Threads intent redirect handling** for supported first-party destinations.
+- **External links** to non-supported destinations open in the system browser.
+- **Android media chooser bridge (new, pending verification):** WebView file-chooser requests are forwarded to Android's system document/photo picker, with support for the website's requested selection mode and MIME types.
+- **Just-in-time media permissions (new, pending verification):** trusted Instagram/Threads pages can request camera or microphone access through Android runtime permission prompts. These permissions are not requested at app startup; only requested WebView capture resources are eligible for grant.
+- **Following-feed preference and recommendation suppression (new, pending verification):** where Instagram/Threads expose a clear “Following” tab, the WebView attempts to select it. Explicitly labelled suggested/recommended post cards are hidden on a best-effort basis.
+- **Local Usage Activity (new, pending verification):** records per-platform foreground time, combined daily totals, session counts, average session duration, and a seven-day history. Tracking pauses when the app is not resumed and records only the currently selected platform. Data stays in local app preferences.
+- **Optional important-only notification filter (new, pending verification):** an opt-in Android notification-listener service filters notifications from the separately installed official Instagram and Threads apps using a local event-wording allowlist. Master and per-platform toggles default off; the user must explicitly grant Android notification access.
+
+The media bridge, feed controls, and local Usage Activity are code-integrated but have not yet been verified on a physical Android device. Photo/video uploads, Stories, voice notes, and camera capture remain dependent on Meta's current web implementation and require end-to-end testing before being described as fully working. The Following-feed selection and recommendation suppression are heuristic website integrations: they cannot guarantee a strictly chronological feed or remove every recommendation if Meta changes its markup or does not expose the relevant control.
+
+These controls operate on the website UI and routes exposed to the embedded WebView. They are not guaranteed to survive changes to Meta's websites.
+
+## Not included in v1.2.0 candidate
+
+The remaining requested feature not implemented in this branch is configurable usage limits.
+
+### Usage limits
+
+- A configurable usage limit is not currently implemented. The Usage Activity screen is informational and does not interrupt browsing with limit banners or countdowns.
+- If limits are added later, their controls belong only in **Settings** or **Usage Activity**—never as repeated in-feed warnings or interruptions.
+
+## Important-only notification limitations
+
+The optional listener filters only notifications posted by the separately installed official Android apps (com.instagram.android and com.instagram.barcelona). It does not receive push events from the embedded WebViews. The filter is off by default, requires the user to grant Android notification access in system settings, and can be enabled independently for Instagram and Threads.
+
+When enabled, the service keeps notifications whose visible text matches a local allowlist for messages, new followers, likes, replies, mentions, tags, shared media, and account-security/verification alerts; other notifications from the selected app are dismissed. This is wording-based and English-oriented: private/hidden notification text, language changes, or Meta wording changes can cause false positives or missed important events. Disable the filter if expected notifications are missing. Notification contents are processed in memory only and are not stored or sent to a server. No private Meta endpoints, undocumented APIs, scraping, credential collection, or platform-control bypasses are used.
+
+## Build and validation status
+
+The latest Android workflow for the candidate's media, usage, feed, and notification changes completed successfully:
+
+- Unit tests: **passed**.
+- Debug APK assembly: **passed**.
+- Release APK assembly: **passed**.
+- Release AAB assembly: **passed**.
+- Optional release signing: **skipped** because signing secrets are not configured.
+- CI artifact: **DoomScroll-v1.2.0-build** (contains the installable debug APK and release build outputs).
+
+[View successful Android build #43677500679](https://github.com/prathyushin/Doomscroll-/actions/runs/43677500679).
+
+A successful CI build confirms compilation and automated tests only. It does not replace real-device checks for login, photo/video picker, Story publishing, voice notes, feed behavior, notification filtering, usage timing, fullscreen, Android Back handling, or dock behavior. The public device-testing package is debug-signed, not a production-signed Play Store package.
 
 ## Important limitations
 
-Doom Scroll is a WebView shell around the official Instagram and Threads websites. It is **not** an independently implemented client and is not affiliated with, endorsed by, or sponsored by Meta.
+Doom Scroll is an independent WebView shell around the official Instagram and Threads websites. It is not an independently implemented social client and is not affiliated with, endorsed by, or sponsored by Meta.
 
-Meta controls the websites, authentication flows, available features, and page markup. Those can change at any time. Route restrictions and DOM-based hiding are best-effort controls and may need updates when the websites change. Embedded login and session behavior can vary by device and platform policy. Story muting is local to Doom Scroll; it does not change account-level mute settings on Instagram.
+Meta controls authentication, website markup, available features, and notification behavior. These can change without notice. Route restrictions, navigation hiding, and Story muting are best-effort website integrations. Story muting is local to Doom Scroll and does not change account-level mute settings on Instagram.
 
-Automated builds and unit tests are run in GitHub Actions. Real-device coverage is still important: test sign-in, DMs, Story trays, Reel navigation, external links, Android Back behavior, and both Threads tabs on your device. Report reproducible issues using the [Bug Report template](https://github.com/prathyushin/Doomscroll-/issues/new?template=bug_report.yml).
-
-## Source code and development
-
-- **[Browse the active release source](https://github.com/prathyushin/Doomscroll-/tree/v1-release-hardening)**
-- [Browse the Android app source](https://github.com/prathyushin/Doomscroll-/tree/v1-release-hardening/app/src/main)
-- [Inspect the route policy and tests](https://github.com/prathyushin/Doomscroll-/tree/v1-release-hardening/app/src/test)
-- [View build and release automation](https://github.com/prathyushin/Doomscroll-/tree/v1-release-hardening/.github/workflows)
-- [Report a bug or request an improvement](https://github.com/prathyushin/Doomscroll-/issues)
-
-### Build locally
+## Build locally
 
 Requirements: Android SDK, JDK 17, and Gradle 8.7.
 
 ```bash
 git clone https://github.com/prathyushin/Doomscroll-.git
 cd Doomscroll-
-git checkout v1-release-hardening
+git checkout v1.2.0-shared-login-media
 gradle testDebugUnitTest
 gradle assembleDebug
 ```
 
-The debug APK is generated at `app/build/outputs/apk/debug/app-debug.apk`.
+The installable debug APK is generated at `app/build/outputs/apk/debug/app-debug.apk`.
 
-## Privacy and security boundaries
+## Privacy and security
 
-- No Meta API keys or provider passwords are requested by Doom Scroll.
-- Sign-in is performed on the official website inside the WebView.
+- Sign-in takes place on the official Instagram or Threads website inside the WebView.
+- Doom Scroll does not request Meta API keys or provider passwords.
 - Story mute preferences are stored locally on the device.
-- No private Meta endpoints, feed scraping, or server-side behavioral telemetry are part of this MVP.
-- WebView file/content access is restricted and mixed content is disabled.
+- Usage totals are stored locally in app preferences; the candidate does not send behavioral telemetry to a server.
+- No private Meta endpoints, undocumented notification APIs, or feed scraping are used.
+- WebView file/content access is restricted and mixed content is disabled. Picker-returned content URIs are handled through Android's system chooser rather than enabling broad WebView file/content access.
+- Camera and microphone permissions are declared but are requested only in response to a trusted platform page's capture request.
+- Notification filtering is opt-in and requires the user to grant Android notification access manually in system settings. The service processes only Instagram/Threads package notifications and does not store or transmit their contents.
 
-## Contributing
+## Bug reports
 
-Bug reports, reproducible test cases, and focused pull requests are welcome. Please include your Android version/device, the app version, the steps to reproduce, and relevant logs or screenshots with private information removed. Never include passwords, session cookies, access tokens, or other secrets.
-
-Before submitting a pull request, run:
-
-```bash
-gradle testDebugUnitTest
-gradle assembleDebug
-```
+Report reproducible issues using the [Bug Report template](https://github.com/prathyushin/Doomscroll-/issues/new?template=bug_report.yml). Include the app version, Android version/device, steps to reproduce, and relevant logs with private information removed. Never include passwords, session cookies, access tokens, or other secrets.
 
 ## Project status and licensing
 

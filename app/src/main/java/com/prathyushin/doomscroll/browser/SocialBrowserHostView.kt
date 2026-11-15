@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.net.Uri
+import android.os.Build
 import android.view.View
 import android.webkit.CookieManager
 import android.webkit.WebChromeClient
@@ -31,10 +32,18 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
     private var allowCurrentReelFromDm = false
     private var destroyed = false
     private var onCanGoBackChanged: ((Boolean) -> Unit)? = null
+    private var onStoryLongPress: ((String) -> Unit)? = null
+    private var onMediaViewerChanged: ((Boolean) -> Unit)? = null
+    private var onFullscreenChanged: ((Boolean) -> Unit)? = null
+    private var onFileChooserRequested: ((android.webkit.ValueCallback<Array<Uri>>, WebChromeClient.FileChooserParams) -> Boolean)? = null
+    private var onWebPermissionRequested: ((android.webkit.PermissionRequest) -> Unit)? = null
+    private val pendingPermissionRequests = mutableMapOf<android.webkit.PermissionRequest, WebView>()
+    private var fullscreenView: View? = null
+    private var fullscreenCallback: WebChromeClient.CustomViewCallback? = null
     private val popupViews = mutableSetOf<WebView>()
 
     init {
-        setBackgroundColor(Color.rgb(255, 243, 230))
+        setBackgroundColor(Color.BLACK)
         cookieManager.setAcceptCookie(true)
         addView(instagramView, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         addView(threadsView, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
@@ -47,8 +56,49 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
         notifyBackState()
     }
 
+    fun setOnStoryLongPress(listener: (String) -> Unit) {
+        onStoryLongPress = listener
+    }
+
+    fun setOnMediaViewerChanged(listener: (Boolean) -> Unit) {
+        onMediaViewerChanged = listener
+    }
+
+    fun setOnFullscreenChanged(listener: (Boolean) -> Unit) {
+        onFullscreenChanged = listener
+    }
+
+    fun setOnFileChooserRequested(listener: (android.webkit.ValueCallback<Array<Uri>>, WebChromeClient.FileChooserParams) -> Boolean) {
+        onFileChooserRequested = listener
+    }
+
+    fun setOnWebPermissionRequested(listener: (android.webkit.PermissionRequest) -> Unit) {
+        onWebPermissionRequested = listener
+    }
+
+    /** Completes a media permission only while its original trusted page is still active. */
+    fun completeWebPermissionRequest(request: android.webkit.PermissionRequest, grantedResources: Array<String>) {
+        val source = pendingPermissionRequests.remove(request) ?: return
+        val currentOrigin = Uri.parse(source.url.orEmpty()).let { Uri.Builder().scheme(it.scheme).encodedAuthority(it.encodedAuthority).build().toString() }
+        val requestedOrigin = request.origin.let { Uri.Builder().scheme(it.scheme).encodedAuthority(it.encodedAuthority).build().toString() }
+        if (currentOrigin != requestedOrigin || grantedResources.isEmpty()) {
+            runCatching { request.deny() }
+            return
+        }
+        runCatching { request.grant(grantedResources) }
+    }
+
+    fun exitFullscreen() {
+        hideFullscreenView()
+    }
+
     fun showProvider(provider: SocialProvider) {
         if (destroyed) return
+        if (activeProvider == provider) {
+            val sameTarget = currentView()
+            if (sameTarget.url.isNullOrBlank()) sameTarget.loadUrl(provider.startUrl)
+            return
+        }
         activeProvider = provider
         instagramView.visibility = if (provider == SocialProvider.INSTAGRAM) View.VISIBLE else View.GONE
         threadsView.visibility = if (provider == SocialProvider.THREADS) View.VISIBLE else View.GONE
@@ -59,9 +109,11 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
     }
 
     fun setMutedUsernames(usernames: Set<String>) {
-        mutedUsernames = usernames.map { it.trim().removePrefix("@").lowercase() }
+        val normalized = usernames.map { it.trim().removePrefix("@").lowercase() }
             .filter { it.matches(Regex("[a-z0-9._]{1,30}")) }
             .toSet()
+        if (normalized == mutedUsernames) return
+        mutedUsernames = normalized
         applyInstagramControls()
     }
 
@@ -96,12 +148,31 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
             view.destroy()
         }
         popupViews.clear()
+        pendingPermissionRequests.keys.toList().forEach { runCatching { it.deny() } }
+        pendingPermissionRequests.clear()
+        onFileChooserRequested = null
+        onWebPermissionRequested = null
         removeAllViews()
+        hideFullscreenView()
         onCanGoBackChanged = null
+        onStoryLongPress = null
+        onMediaViewerChanged = null
+        onFullscreenChanged = null
     }
 
     private fun currentView(): WebView =
         if (activeProvider == SocialProvider.INSTAGRAM) instagramView else threadsView
+
+    private fun currentViewFor(provider: SocialProvider): WebView =
+        if (provider == SocialProvider.INSTAGRAM) instagramView else threadsView
+
+    private fun isTrustedMetaOrigin(uri: Uri): Boolean {
+        if (!uri.scheme.equals("https", ignoreCase = true)) return false
+        val host = uri.host?.lowercase().orEmpty()
+        return host == "instagram.com" || host.endsWith(".instagram.com") ||
+            host == "threads.com" || host.endsWith(".threads.com") ||
+            host == "threads.net" || host.endsWith(".threads.net")
+    }
 
     private fun notifyBackState() {
         onCanGoBackChanged?.invoke(!destroyed && currentView().canGoBack())
@@ -109,9 +180,85 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
 
     private fun createWebView(provider: SocialProvider): WebView {
         return WebView(context).apply {
-            setBackgroundColor(Color.rgb(255, 243, 230))
+            setBackgroundColor(Color.BLACK)
             configureWebView(this)
             webChromeClient = object : WebChromeClient() {
+                override fun onShowFileChooser(
+                    webView: WebView,
+                    filePathCallback: android.webkit.ValueCallback<Array<Uri>>,
+                    fileChooserParams: WebChromeClient.FileChooserParams
+                ): Boolean {
+                    val handled = onFileChooserRequested?.invoke(filePathCallback, fileChooserParams) == true
+                    if (!handled) filePathCallback.onReceiveValue(null)
+                    return handled
+                }
+
+                override fun onPermissionRequest(request: android.webkit.PermissionRequest) {
+                    val origin = request.origin
+                    if (!isTrustedMetaOrigin(origin) || destroyed) {
+                        request.deny()
+                        return
+                    }
+                    val supported = request.resources.filter {
+                        it == android.webkit.PermissionRequest.RESOURCE_AUDIO_CAPTURE ||
+                            it == android.webkit.PermissionRequest.RESOURCE_VIDEO_CAPTURE
+                    }
+                    if (supported.isEmpty()) {
+                        request.deny()
+                        return
+                    }
+                    pendingPermissionRequests[request] = this@SocialBrowserHostView.currentViewFor(provider)
+                    onWebPermissionRequested?.invoke(request) ?: run {
+                        pendingPermissionRequests.remove(request)
+                        request.deny()
+                    }
+                }
+
+                override fun onPermissionRequestCanceled(request: android.webkit.PermissionRequest) {
+                    pendingPermissionRequests.remove(request)
+                }
+
+                override fun onJsPrompt(
+                    view: WebView,
+                    url: String,
+                    message: String,
+                    defaultValue: String?,
+                    result: android.webkit.JsPromptResult
+                ): Boolean {
+                    val prefix = "doomscroll-story:"
+                    if (message.startsWith(prefix)) {
+                        val username = message.removePrefix(prefix).trim().lowercase()
+                        if (username.matches(Regex("[a-z0-9._]{1,30}"))) {
+                            onStoryLongPress?.invoke(username)
+                            result.confirm("")
+                            return true
+                        }
+                    }
+                    if (message.startsWith("doomscroll-media:")) {
+                        onMediaViewerChanged?.invoke(message.endsWith(":true"))
+                        result.confirm("")
+                        return true
+                    }
+                    return super.onJsPrompt(view, url, message, defaultValue, result)
+                }
+
+                override fun onShowCustomView(view: View, callback: WebChromeClient.CustomViewCallback) {
+                    if (fullscreenView != null) {
+                        callback.onCustomViewHidden()
+                        return
+                    }
+                    fullscreenView = view
+                    fullscreenCallback = callback
+                    view.setBackgroundColor(Color.BLACK)
+                    addView(view, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+                    view.bringToFront()
+                    onFullscreenChanged?.invoke(true)
+                }
+
+                override fun onHideCustomView() {
+                    hideFullscreenView()
+                }
+
                 override fun onCreateWindow(
                     view: WebView,
                     isDialog: Boolean,
@@ -158,6 +305,9 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
         view.settings.allowContentAccess = false
         view.settings.mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_NEVER_ALLOW
         view.settings.safeBrowsingEnabled = true
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            view.settings.forceDark = android.webkit.WebSettings.FORCE_DARK_ON
+        }
         cookieManager.setAcceptCookie(true)
         cookieManager.setAcceptThirdPartyCookies(view, true)
     }
@@ -179,7 +329,10 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
             override fun onPageFinished(view: WebView, url: String) {
                 super.onPageFinished(view, url)
                 when (provider) {
-                    SocialProvider.INSTAGRAM -> applyInstagramControls(view)
+                    SocialProvider.INSTAGRAM -> {
+                        applyInstagramControls(view)
+                        installMediaViewerObserver(view)
+                    }
                     SocialProvider.THREADS -> applyThreadsControls(view)
                 }
                 if (view === currentView()) notifyBackState()
@@ -193,6 +346,21 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
 
     private fun handleNavigation(view: WebView, uri: Uri, provider: SocialProvider): Boolean {
         val host = uri.host?.lowercase().orEmpty()
+
+        // Meta sometimes wraps a normal HTTPS destination in an intent:// URL.
+        // Keep first-party Threads/Instagram redirects inside their existing WebView.
+        if (uri.scheme.equals("intent", ignoreCase = true) &&
+            SocialRoutePolicy.isAllowedHost(host, provider)) {
+            val httpsUri = Uri.Builder()
+                .scheme("https")
+                .encodedAuthority(uri.encodedAuthority)
+                .encodedPath(uri.encodedPath)
+                .encodedQuery(uri.encodedQuery)
+                .build()
+            view.post { view.loadUrl(httpsUri.toString()) }
+            return true
+        }
+
         if (!SocialRoutePolicy.isAllowedHost(host, provider)) {
             if (uri.scheme == "https" || uri.scheme == "http") openExternal(uri)
             return true
@@ -219,6 +387,43 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
             }
         }
         return false
+    }
+
+    private fun hideFullscreenView() {
+        val view = fullscreenView ?: return
+        fullscreenView = null
+        (view.parent as? FrameLayout)?.removeView(view)
+        fullscreenCallback?.onCustomViewHidden()
+        fullscreenCallback = null
+        onFullscreenChanged?.invoke(false)
+    }
+
+    private fun installMediaViewerObserver(view: WebView) {
+        val script = """
+            (function() {
+              function notify() {
+                const path = location.pathname.toLowerCase();
+                const active = path.startsWith('/stories/') ||
+                  path.startsWith('/reel/') ||
+                  path.startsWith('/reels/');
+                window.prompt('doomscroll-media:' + (active ? 'true' : 'false'));
+              }
+              if (!window.__doomScrollMediaObserver) {
+                ['pushState','replaceState'].forEach(function(method) {
+                  const original = history[method];
+                  history[method] = function() {
+                    const result = original.apply(this, arguments);
+                    setTimeout(notify, 0);
+                    return result;
+                  };
+                });
+                window.addEventListener('popstate', notify);
+                window.__doomScrollMediaObserver = true;
+              }
+              notify();
+            })();
+        """.trimIndent()
+        view.evaluateJavascript(script, null)
     }
 
     private fun openExternal(uri: Uri) {
@@ -269,6 +474,46 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
                 });
               }
 
+              function selectFollowingFeed() {
+                if (window.__doomScrollFollowingFeedSelected) return;
+                const candidates = Array.from(document.querySelectorAll('header [role="tab"], header button, header a[role="tab"], [role="tab"]'));
+                const following = candidates.find(function(node) {
+                  return (node.innerText || node.getAttribute('aria-label') || '').trim().replace(/\s+/g, ' ').toLowerCase() === 'following';
+                });
+                if (following && following.getAttribute('aria-selected') !== 'true') {
+                  following.click();
+                  window.__doomScrollFollowingFeedSelected = true;
+                }
+              }
+
+              function hideSuggestedPosts() {
+                document.querySelectorAll('article,[role="article"]').forEach(function(article) {
+                  const text = (article.innerText || '').toLowerCase();
+                  if (text.includes('suggested for you') || text.includes('suggested posts') ||
+                      text.includes('because you follow') || text.includes('recommended for you')) {
+                    article.style.setProperty('display', 'none', 'important');
+                  }
+                });
+              }
+
+              function installFeedCleanup() {
+                selectFollowingFeed();
+                hideSuggestedPosts();
+                if (!window.__doomScrollFeedCleanupObserver) {
+                  let timer = null;
+                  window.__doomScrollFeedCleanupObserver = new MutationObserver(function() {
+                    if (timer) clearTimeout(timer);
+                    timer = setTimeout(function() {
+                      selectFollowingFeed();
+                      hideSuggestedPosts();
+                    }, 300);
+                  });
+                  window.__doomScrollFeedCleanupObserver.observe(document.documentElement, {
+                    childList: true, subtree: true
+                  });
+                }
+              }
+
               function getStoryTray() {
                 const candidates = Array.from(document.querySelectorAll('[aria-label*="stor" i]'));
                 for (const candidate of candidates) {
@@ -300,9 +545,52 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
                 });
               }
 
+              function installStoryLongPress() {
+                const tray = getStoryTray();
+                if (!tray || tray.__doomScrollLongPressInstalled) return;
+                tray.__doomScrollLongPressInstalled = true;
+                let pressTimer = null;
+                let pressedLink = null;
+                function cancelPress() {
+                  if (pressTimer) clearTimeout(pressTimer);
+                  pressTimer = null;
+                  pressedLink = null;
+                }
+                tray.addEventListener('touchstart', function(event) {
+                  const link = event.target.closest('a[href]');
+                  if (!link) return;
+                  cancelPress();
+                  pressedLink = link;
+                  pressTimer = setTimeout(function() {
+                    try {
+                      const path = new URL(link.href, location.origin).pathname;
+                      const username = path.split('/').filter(Boolean)[0] || '';
+                      if (/^[a-z0-9._]{1,30}$/i.test(username)) {
+                        window.prompt('doomscroll-story:' + username.toLowerCase());
+                      }
+                    } catch (_) {}
+                    cancelPress();
+                  }, 650);
+                }, {passive:true});
+                ['touchend','touchcancel','touchmove'].forEach(function(type) {
+                  tray.addEventListener(type, cancelPress, {passive:true});
+                });
+                tray.addEventListener('contextmenu', function(event) {
+                  const link = event.target.closest('a[href]');
+                  if (!link) return;
+                  try {
+                    const username = new URL(link.href, location.origin).pathname.split('/').filter(Boolean)[0] || '';
+                    if (/^[a-z0-9._]{1,30}$/i.test(username)) {
+                      event.preventDefault();
+                      window.prompt('doomscroll-story:' + username.toLowerCase());
+                    }
+                  } catch (_) {}
+                });
+              }
+
               function scheduleStoryUpdate() {
                 if (window.__doomScrollStoryTimer) clearTimeout(window.__doomScrollStoryTimer);
-                window.__doomScrollStoryTimer = setTimeout(attachStoryTrayObserver, 140);
+                window.__doomScrollStoryTimer = setTimeout(attachStoryTrayObserver, 220);
               }
 
               function attachStoryTrayObserver() {
@@ -317,9 +605,11 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
                   }
                 }
                 updateMutedStories();
+                installStoryLongPress();
               }
 
               hideTrapNavigation();
+              installFeedCleanup();
               attachStoryTrayObserver();
               const storyDiscoveryRoot = document.querySelector('header,[role="banner"]');
               if (storyDiscoveryRoot && !window.__doomScrollStoryDiscoveryObserver) {
@@ -409,6 +699,26 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
                 document.documentElement.appendChild(style);
               }
               style.textContent = '.doom-scroll-threads-for-you { display:none !important; }';
+              function selectFollowingTab() {
+                if (window.__doomScrollThreadsFollowingSelected) return;
+                const candidates = Array.from(document.querySelectorAll('[role="tab"],header button,header a[role="tab"]'));
+                const following = candidates.find(function(node) {
+                  return (node.innerText || node.getAttribute('aria-label') || '').trim().replace(/\s+/g, ' ').toLowerCase() === 'following';
+                });
+                if (following && following.getAttribute('aria-selected') !== 'true') {
+                  following.click();
+                  window.__doomScrollThreadsFollowingSelected = true;
+                }
+              }
+              function hideSuggestedThreads() {
+                document.querySelectorAll('article,[role="article"]').forEach(function(article) {
+                  const text = (article.innerText || '').toLowerCase();
+                  if (text.includes('suggested for you') || text.includes('suggested posts') ||
+                      text.includes('recommended for you')) {
+                    article.style.setProperty('display', 'none', 'important');
+                  }
+                });
+              }
               function hideForYouTab() {
                 document.querySelectorAll('a[href],button,[role="tab"]').forEach(function(node) {
                   const label = ((node.getAttribute('aria-label') || '') + ' ' +
@@ -420,11 +730,17 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
                 });
               }
               hideForYouTab();
+              selectFollowingTab();
+              hideSuggestedThreads();
               if (!window.__doomScrollThreadsObserver) {
                 let timer = null;
                 window.__doomScrollThreadsObserver = new MutationObserver(function() {
                   if (timer) clearTimeout(timer);
-                  timer = setTimeout(hideForYouTab, 160);
+                  timer = setTimeout(function() {
+                    hideForYouTab();
+                    selectFollowingTab();
+                    hideSuggestedThreads();
+                  }, 350);
                 });
                 window.__doomScrollThreadsObserver.observe(document.documentElement, {
                   childList: true, subtree: true
