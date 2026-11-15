@@ -34,6 +34,7 @@ The current v1.2.0 branch includes:
 - **Just-in-time media permissions (new, pending verification):** trusted Instagram/Threads pages can request camera or microphone access through Android runtime permission prompts. These permissions are not requested at app startup; only requested WebView capture resources are eligible for grant.
 - **Following-feed preference and recommendation suppression (new, pending verification):** where Instagram/Threads expose a clear “Following” tab, the WebView attempts to select it. Explicitly labelled suggested/recommended post cards are hidden on a best-effort basis.
 - **Local Usage Activity (new, pending verification):** records per-platform foreground time, combined daily totals, session counts, average session duration, and a seven-day history. Tracking pauses when the app is not resumed and records only the currently selected platform. Data stays in local app preferences.
+- **Optional important-only notification filter (new, pending verification):** an opt-in Android notification-listener service filters notifications from the separately installed official Instagram and Threads apps using a local event-wording allowlist. Master and per-platform toggles default off; the user must explicitly grant Android notification access.
 
 The media bridge, feed controls, and local Usage Activity are code-integrated but have not yet been verified on a physical Android device. Photo/video uploads, Stories, voice notes, and camera capture remain dependent on Meta's current web implementation and require end-to-end testing before being described as fully working. The Following-feed selection and recommendation suppression are heuristic website integrations: they cannot guarantee a strictly chronological feed or remove every recommendation if Meta changes its markup or does not expose the relevant control.
 
@@ -50,11 +51,9 @@ The following requested features are specified in [issue #6](https://github.com/
 
 ### Important-only notifications
 
-Doom Scroll embeds the Instagram and Threads websites; a WebView does not automatically receive the native push notifications posted by the separate official apps. This candidate does not deliver Instagram or Threads event notifications.
+The optional listener filters only notifications posted by the separately installed official Android apps (com.instagram.android and com.instagram.barcelona). It does not receive push events from the embedded WebViews. The filter is off by default, requires the user to grant Android notification access in system settings, and can be enabled independently for Instagram and Threads.
 
-The requested important-event filter (messages, new followers, likes, replies, mentions and shared media) must not be represented as working until a supported delivery source is implemented and tested. Followed-account posts, Stories, Notes and recommendation/promotional alerts are intended to remain suppressed. No private Meta endpoints, undocumented APIs, scraping, credential collection or platform-control bypasses are used.
-
-An Android notification-listener approach, if considered later, would only filter notifications actually posted by separately installed official apps. It would require explicit user-granted notification access, remain optional, and could not guarantee that every event category is delivered by those apps.
+When enabled, the service keeps notifications whose visible text matches a local allowlist for messages, new followers, likes, replies, mentions, tags, and shared media; other notifications from the selected app are dismissed. This is wording-based and English-oriented: private/hidden notification text, language changes, or Meta wording changes can cause false positives or missed important events. Disable the filter if expected notifications are missing. Notification contents are processed in memory only and are not stored or sent to a server. No private Meta endpoints, undocumented APIs, scraping, credential collection, or platform-control bypasses are used.
 
 ## Build and validation status
 
@@ -99,7 +98,8 @@ The installable debug APK is generated at `app/build/outputs/apk/debug/app-debug
 - Usage totals are stored locally in app preferences; the candidate does not send behavioral telemetry to a server.
 - No private Meta endpoints, undocumented notification APIs, or feed scraping are used.
 - WebView file/content access is restricted and mixed content is disabled. Picker-returned content URIs are handled through Android's system chooser rather than enabling broad WebView file/content access.
-- Camera and microphone permissions are declared but are requested only in response to a trusted platform page's capture request. No notification-listener or usage-access permission is requested.
+- Camera and microphone permissions are declared but are requested only in response to a trusted platform page's capture request.
+- Notification filtering is opt-in and requires the user to grant Android notification access manually in system settings. The service processes only Instagram/Threads package notifications and does not store or transmit their contents.
 
 ## Bug reports
 
