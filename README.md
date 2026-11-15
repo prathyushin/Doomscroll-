@@ -4,7 +4,7 @@
 
 Doom Scroll is an Android app that places the official Instagram and Threads websites in separate WebViews inside one app shell. It aims to make intentional social use easier while reducing default access to selected algorithmic destinations.
 
-> **Repository status (14 November 2026):** The `v1.2.0-shared-login-media` branch is a draft release candidate. Its Android CI build and unit tests have passed. The public GitHub Releases page still publishes **v1.1.0**; v1.2.0 is not yet a published release. The usage dashboard and important-only notification work are tracked separately and are **not included in this candidate**.
+> **Repository status (15 November 2026):** The `v1.2.0-shared-login-media` branch is still a draft release candidate. A new Android media-picker and runtime-permission integration has been committed and requires a fresh CI run plus real-device testing. The public GitHub Releases page still publishes **v1.1.0**; v1.2.0 is not yet a published release.
 
 ## Downloads
 
@@ -30,6 +30,10 @@ The current v1.2.0 branch includes:
 - **DM-origin single-Reel handling** to restrict onward Reel-feed navigation from that entry point.
 - **Threads intent redirect handling** for supported first-party destinations.
 - **External links** to non-supported destinations open in the system browser.
+- **Android media chooser bridge (new, pending verification):** WebView file-chooser requests are forwarded to Android's system document/photo picker, with support for the website's requested selection mode and MIME types.
+- **Just-in-time media permissions (new, pending verification):** trusted Instagram/Threads pages can request camera or microphone access through Android runtime permission prompts. These permissions are not requested at app startup; only requested WebView capture resources are eligible for grant.
+
+The new media bridge is code-integrated but has not yet been verified on a physical Android device. Photo/video uploads, Stories, voice notes, and camera capture remain dependent on Meta's current web implementation and require end-to-end testing before being described as fully working.
 
 These controls operate on the website UI and routes exposed to the embedded WebView. They are not guaranteed to survive changes to Meta's websites.
 
@@ -95,8 +99,8 @@ The installable debug APK is generated at `app/build/outputs/apk/debug/app-debug
 - Story mute preferences are stored locally on the device.
 - The v1.2.0 candidate does not collect usage analytics or send behavioral telemetry to a server.
 - No private Meta endpoints, undocumented notification APIs, or feed scraping are used.
-- WebView file/content access is restricted and mixed content is disabled.
-- No additional notification-listener or usage-access permission is requested by this candidate.
+- WebView file/content access is restricted and mixed content is disabled. Picker-returned content URIs are handled through Android's system chooser rather than enabling broad WebView file/content access.
+- Camera and microphone permissions are declared but are requested only in response to a trusted platform page's capture request. No notification-listener or usage-access permission is requested.
 
 ## Bug reports
 
