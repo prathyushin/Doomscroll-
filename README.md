@@ -42,14 +42,14 @@ These controls operate on the website UI and routes exposed to the embedded WebV
 
 ## Not included in v1.2.0 candidate
 
-The following requested features are specified in [issue #6](https://github.com/prathyushin/Doomscroll-/issues/6), but are not implemented in this branch:
+The remaining requested feature not implemented in this branch is configurable usage limits.
 
 ### Usage limits
 
 - A configurable usage limit is not currently implemented. The Usage Activity screen is informational and does not interrupt browsing with limit banners or countdowns.
 - If limits are added later, their controls belong only in **Settings** or **Usage Activity**—never as repeated in-feed warnings or interruptions.
 
-### Important-only notifications
+## Important-only notification limitations
 
 The optional listener filters only notifications posted by the separately installed official Android apps (com.instagram.android and com.instagram.barcelona). It does not receive push events from the embedded WebViews. The filter is off by default, requires the user to grant Android notification access in system settings, and can be enabled independently for Instagram and Threads.
 
