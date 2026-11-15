@@ -188,6 +188,11 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
                     filePathCallback: android.webkit.ValueCallback<Array<Uri>>,
                     fileChooserParams: WebChromeClient.FileChooserParams
                 ): Boolean {
+                    // Only the official social origins may open the Android media picker.
+                    if (!isTrustedMetaOrigin(Uri.parse(webView.url.orEmpty()))) {
+                        filePathCallback.onReceiveValue(null)
+                        return true
+                    }
                     val handled = onFileChooserRequested?.invoke(filePathCallback, fileChooserParams) == true
                     if (!handled) filePathCallback.onReceiveValue(null)
                     return handled
