@@ -13,8 +13,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import android.content.pm.PackageManager
 import com.prathyushin.doomscroll.browser.SocialBrowserHostView
@@ -22,7 +20,6 @@ import com.prathyushin.doomscroll.ui.DoomScrollApp
 
 class MainActivity : ComponentActivity() {
     private var browserHost: SocialBrowserHostView? = null
-    private var appForeground by mutableStateOf(false)
     private lateinit var fileChooserLauncher: ActivityResultLauncher<Intent>
     private lateinit var mediaPermissionLauncher: ActivityResultLauncher<Array<String>>
     private var pendingFileCallback: ValueCallback<Array<Uri>>? = null
@@ -68,7 +65,7 @@ class MainActivity : ComponentActivity() {
             window.isStatusBarContrastEnforced = false
         }
         setContent {
-            DoomScrollApp(isAppForeground = appForeground, onBrowserHostReady = { host ->
+            DoomScrollApp(onBrowserHostReady = { host ->
                 browserHost = host
                 host.setOnFileChooserRequested { callback, params ->
                     pendingFileCallback?.onReceiveValue(null)
@@ -124,14 +121,12 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onPause() {
-        appForeground = false
         browserHost?.pauseAndFlush()
         super.onPause()
     }
 
     override fun onResume() {
         super.onResume()
-        appForeground = true
         browserHost?.resumeViews()
     }
 

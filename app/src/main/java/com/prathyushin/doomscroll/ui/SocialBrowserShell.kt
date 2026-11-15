@@ -1,11 +1,5 @@
 package com.prathyushin.doomscroll.ui
 
-import android.content.Context
-import android.content.Intent
-import android.provider.Settings
-import android.os.SystemClock
-import org.json.JSONObject
-import java.time.LocalDate
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -14,7 +8,6 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.draw.clip
@@ -44,60 +37,19 @@ private val SurfaceBlack = Color(0xFF0A0A0A)
 private val ElevatedBlack = Color(0xFF171717)
 private val TextWhite = Color(0xFFF5F5F5)
 private val Accent = Color(0xFFB7A0A4)
-private const val PREFS = "doom_scroll_social_preferences"
-private const val MUTED_KEY = "muted_story_usernames"
-private const val USAGE_KEY = "local_daily_usage_v1"
 
 @Composable
-fun DoomScrollApp(isAppForeground: Boolean, onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val prefs = remember { context.getSharedPreferences(PREFS, Context.MODE_PRIVATE) }
+fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
     var provider by remember { mutableStateOf(SocialProvider.INSTAGRAM) }
-    var mutedUsers by remember {
-        mutableStateOf(prefs.getStringSet(MUTED_KEY, emptySet())?.toSet() ?: emptySet())
-    }
+    var mutedUsers by remember { mutableStateOf(emptySet<String>()) }
     var selectedStoryUser by remember { mutableStateOf<String?>(null) }
+    var showAbout by remember { mutableStateOf(false) }
     var dockExpanded by remember { mutableStateOf(false) }
     var dockVisible by remember { mutableStateOf(true) }
     var browserHost by remember { mutableStateOf<SocialBrowserHostView?>(null) }
     var canGoBack by remember { mutableStateOf(false) }
     var isMediaViewer by remember { mutableStateOf(false) }
     var isFullscreen by remember { mutableStateOf(false) }
-    var showUsage by remember { mutableStateOf(false) }
-    var usageData by remember { mutableStateOf(readUsageData(prefs)) }
-    var notificationFilterEnabled by remember { mutableStateOf(prefs.getBoolean("notification_filter_enabled", false)) }
-    var instagramNotificationsEnabled by remember { mutableStateOf(prefs.getBoolean("notification_filter_instagram", true)) }
-    var threadsNotificationsEnabled by remember { mutableStateOf(prefs.getBoolean("notification_filter_threads", true)) }
-    var notificationAccessEnabled by remember { mutableStateOf(isNotificationAccessEnabled(context)) }
-
-    LaunchedEffect(isAppForeground) {
-        if (isAppForeground) notificationAccessEnabled = isNotificationAccessEnabled(context)
-    }
-
-    LaunchedEffect(provider, isAppForeground) {
-        if (!isAppForeground) return@LaunchedEffect
-        var lastTick = SystemClock.elapsedRealtime()
-        addUsageInterval(prefs, provider, 0L, startSession = true)
-        usageData = readUsageData(prefs)
-        try {
-            while (true) {
-                delay(1000)
-                val now = SystemClock.elapsedRealtime()
-                val elapsed = (now - lastTick).coerceAtLeast(0L)
-                lastTick = now
-                if (elapsed > 0L) {
-                    addUsageInterval(prefs, provider, elapsed, startSession = false)
-                    usageData = readUsageData(prefs)
-                }
-            }
-        } finally {
-            val now = SystemClock.elapsedRealtime()
-            val elapsed = (now - lastTick).coerceAtLeast(0L)
-            if (elapsed > 0L) addUsageInterval(prefs, provider, elapsed, startSession = false)
-            usageData = readUsageData(prefs)
-        }
-    }
-
     LaunchedEffect(dockExpanded, dockVisible, isMediaViewer, isFullscreen) {
         if (isMediaViewer || isFullscreen) {
             dockExpanded = false
@@ -207,16 +159,19 @@ fun DoomScrollApp(isAppForeground: Boolean, onBrowserHostReady: (SocialBrowserHo
                             dockExpanded = false
                             dockVisible = false
                         }
-                        OutlinedButton(
+                        TextButton(
                             onClick = {
-                                usageData = readUsageData(prefs)
-                                showUsage = true
+                                showAbout = true
                                 dockExpanded = false
                             },
-                            shape = RoundedCornerShape(22.dp),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = TextWhite),
-                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp)
-                        ) { Text("Usage") }
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp)
+                        ) {
+                            Text(
+                                "About",
+                                color = TextWhite.copy(alpha = 0.72f),
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                        }
                     }
                 }
                 FilledIconButton(
@@ -238,56 +193,23 @@ fun DoomScrollApp(isAppForeground: Boolean, onBrowserHostReady: (SocialBrowserHo
         }
     }
 
-    if (showUsage) {
+    if (showAbout) {
         AlertDialog(
-            onDismissRequest = { showUsage = false },
-            title = { Text("Usage Activity") },
+            onDismissRequest = { showAbout = false },
+            title = { Text("Doom Scroll") },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Today · inside Doom Scroll", fontWeight = FontWeight.SemiBold)
-                    Text("Instagram  ${formatUsageDuration(usageData.instagramTodayMs)}")
-                    Text("Threads  ${formatUsageDuration(usageData.threadsTodayMs)}")
-                    Text("Combined  ${formatUsageDuration(usageData.instagramTodayMs + usageData.threadsTodayMs)}")
-                    Text("Sessions  ${usageData.instagramTodaySessions + usageData.threadsTodaySessions} · Avg. ${formatUsageDuration(usageData.averageSessionMs)}")
-                    Divider(color = TextWhite.copy(alpha = 0.15f))
-                    Text("Last 7 days", fontWeight = FontWeight.SemiBold)
-                    usageData.week.forEach { day ->
-                        Text("${day.first}  ${formatUsageDuration(day.second)}")
-                    }
-                    Divider(color = TextWhite.copy(alpha = 0.15f))
-                    Text("Important-only notifications", fontWeight = FontWeight.SemiBold)
-                    Text("Optional filter for notifications posted by the separate official apps. It does not receive notifications from the embedded websites.", style = MaterialTheme.typography.bodySmall, color = TextWhite.copy(alpha = 0.7f))
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                        Text("Enable filter")
-                        Switch(checked = notificationFilterEnabled, onCheckedChange = {
-                            notificationFilterEnabled = it
-                            prefs.edit().putBoolean("notification_filter_enabled", it).apply()
-                        })
-                    }
-                    if (notificationFilterEnabled) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                            Text("Instagram")
-                            Switch(checked = instagramNotificationsEnabled, onCheckedChange = {
-                                instagramNotificationsEnabled = it
-                                prefs.edit().putBoolean("notification_filter_instagram", it).apply()
-                            })
-                        }
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                            Text("Threads")
-                            Switch(checked = threadsNotificationsEnabled, onCheckedChange = {
-                                threadsNotificationsEnabled = it
-                                prefs.edit().putBoolean("notification_filter_threads", it).apply()
-                            })
-                        }
-                        Text(if (notificationAccessEnabled) "Android notification access is enabled." else "Android notification access is not enabled yet.", style = MaterialTheme.typography.bodySmall, color = TextWhite.copy(alpha = 0.7f))
-                        TextButton(onClick = {
-                            runCatching { context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) }
-                        }) { Text("Open notification access settings") }
-                    }
-                    Text("These totals measure Doom Scroll foreground time, not usage in the separate Instagram or Threads apps.", style = MaterialTheme.typography.bodySmall, color = TextWhite.copy(alpha = 0.7f))
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("Built by Pranav and Prathyush", fontWeight = FontWeight.Medium)
+                    Text(
+                        "An independent project.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextWhite.copy(alpha = 0.68f)
+                    )
                 }
             },
-            confirmButton = { TextButton(onClick = { showUsage = false }) { Text("Done") } }
+            confirmButton = {
+                TextButton(onClick = { showAbout = false }) { Text("Close") }
+            }
         )
     }
 
@@ -305,7 +227,6 @@ fun DoomScrollApp(isAppForeground: Boolean, onBrowserHostReady: (SocialBrowserHo
             confirmButton = {
                 TextButton(onClick = {
                     mutedUsers = if (isMuted) mutedUsers - username else mutedUsers + username
-                    prefs.edit().putStringSet(MUTED_KEY, mutedUsers.toMutableSet()).apply()
                     browserHost?.setMutedUsernames(mutedUsers)
                     selectedStoryUser = null
                 }) { Text(if (isMuted) "Unmute" else "Mute") }
@@ -317,69 +238,6 @@ fun DoomScrollApp(isAppForeground: Boolean, onBrowserHostReady: (SocialBrowserHo
     }
 }
 
-
-
-private fun isNotificationAccessEnabled(context: Context): Boolean {
-    val enabled = Settings.Secure.getString(context.contentResolver, "enabled_notification_listeners").orEmpty()
-    return enabled.split(':').any { component -> component.contains(context.packageName) }
-}
-
-private data class UsageData(
-    val instagramTodayMs: Long,
-    val threadsTodayMs: Long,
-    val instagramTodaySessions: Int,
-    val threadsTodaySessions: Int,
-    val averageSessionMs: Long,
-    val week: List<Pair<String, Long>>
-)
-
-private fun addUsageInterval(
-    prefs: android.content.SharedPreferences,
-    provider: SocialProvider,
-    elapsedMs: Long,
-    startSession: Boolean
-) {
-    val root = runCatching { JSONObject(prefs.getString(USAGE_KEY, "{}") ?: "{}") }
-        .getOrElse { JSONObject() }
-    val date = LocalDate.now().toString()
-    val day = root.optJSONObject(date) ?: JSONObject()
-    val prefix = if (provider == SocialProvider.INSTAGRAM) "instagram" else "threads"
-    val timeKey = "${prefix}_ms"
-    val sessionsKey = "${prefix}_sessions"
-    day.put(timeKey, day.optLong(timeKey) + elapsedMs)
-    if (startSession) day.put(sessionsKey, day.optInt(sessionsKey) + 1)
-    root.put(date, day)
-    prefs.edit().putString(USAGE_KEY, root.toString()).apply()
-}
-
-private fun readUsageData(prefs: android.content.SharedPreferences): UsageData {
-    val root = runCatching { JSONObject(prefs.getString(USAGE_KEY, "{}") ?: "{}") }
-        .getOrElse { JSONObject() }
-    val today = root.optJSONObject(LocalDate.now().toString()) ?: JSONObject()
-    val instagramMs = today.optLong("instagram_ms")
-    val threadsMs = today.optLong("threads_ms")
-    val instagramSessions = today.optInt("instagram_sessions")
-    val threadsSessions = today.optInt("threads_sessions")
-    val sessions = instagramSessions + threadsSessions
-    val totalMs = instagramMs + threadsMs
-    val week = (0..6).map { offset ->
-        val date = LocalDate.now().minusDays(offset.toLong())
-        val day = root.optJSONObject(date.toString()) ?: JSONObject()
-        val label = if (offset == 0) "Today" else date.dayOfWeek.name.lowercase().replaceFirstChar { it.uppercase() }
-        label to (day.optLong("instagram_ms") + day.optLong("threads_ms"))
-    }.reversed()
-    return UsageData(
-        instagramMs, threadsMs, instagramSessions, threadsSessions,
-        if (sessions > 0) totalMs / sessions else 0L, week
-    )
-}
-
-private fun formatUsageDuration(milliseconds: Long): String {
-    val minutes = milliseconds.coerceAtLeast(0L) / 60_000L
-    val hours = minutes / 60L
-    val remainder = minutes % 60L
-    return if (hours > 0L) "${hours}h ${remainder}m" else "${remainder}m"
-}
 
 @Composable
 private fun DockProvider(label: String, selected: Boolean, onClick: () -> Unit) {

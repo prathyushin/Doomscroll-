@@ -32,55 +32,58 @@ jobs:
       - name: Build installable Android APK
         run: |
           gradle assembleDebug
-          cp app/build/outputs/apk/debug/app-debug.apk DoomScroll-v1.2.0.apk
-          sha256sum DoomScroll-v1.2.0.apk > SHA256SUMS.txt
+          cp app/build/outputs/apk/debug/app-debug.apk DoomScroll-v1.2.1.apk
+          sha256sum DoomScroll-v1.2.1.apk > SHA256SUMS.txt
 
       - name: Publish public GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          TAG="v1.2.0"
-          TITLE="Doom Scroll v1.2.0"
-          NOTES="Doom Scroll v1.2.0 — public Android device-testing release candidate.
+          TAG="v1.2.1"
+          TITLE="Doom Scroll v1.2.1"
+          NOTES="Doom Scroll v1.2.1 — privacy-minimized public Android device-testing release.
 
-          DOWNLOAD: Download DoomScroll-v1.2.0.apk from the Assets section below.
+          DOWNLOAD: Download DoomScroll-v1.2.1.apk from the Assets section below.
 
           WHAT'S INCLUDED
           - Instagram and Threads in one Android app
           - Persistent supported website sessions
           - Instagram Explore and Reels-feed restrictions
           - DM-origin single-Reel handling
-          - Long-press Instagram Story tiles to mute/unmute locally
+          - Long-press Instagram Story tiles to mute/unmute locally for the current session
           - Floating auto-hiding glass-style app switcher
           - Pure black dark interface
           - Android system picker bridge for website-requested photo/video selection (pending device verification)
           - Just-in-time Android camera/microphone permission bridge for trusted platform origins (pending device verification)
           - Best-effort Following-feed selection and explicit recommendation-card suppression (website markup dependent)
-          - Local Usage Activity: per-platform foreground totals, combined daily time, session counts, average session duration, and seven-day history
-          - Optional important-only notification filtering for separately installed official apps, with per-platform toggles and explicit Android notification-access consent
           - Instagram Stories and Reels remain in the original web viewer
           - Fullscreen support when the web player requests it
           - External web links open in the system browser
 
-          NOT INCLUDED IN THIS BUILD
-          - Configurable usage limits or in-feed limit reminders
-          - Guaranteed removal of every recommendation or guaranteed chronological ordering where Meta does not expose a Following feed
-          - Push notifications originating from the embedded WebViews; the optional listener can only filter notifications posted by separately installed official apps
+          REMOVED IN THIS VERSION
+          - App Usage Activity tracking and persisted usage history
+          - Notification-listener service and notification-content access
+
+          PRIVACY NOTES
+          - Instagram/Threads login sessions remain in Android WebView cookies and site storage on the device; these are needed for sign-in persistence.
+          - Story mute choices are session-only and are not persisted.
+          - Camera/microphone permissions are requested only after a trusted Instagram/Threads page initiates a capture request.
+          - Meta websites continue to control their own account, cookie, and website-data processing.
 
           IMPORTANT
-          This APK is signed with Android's standard debug key for public evaluation and device testing. It is not a production-signed Play Store release. The official Instagram and Threads websites control login, site markup, and feature availability, so compatibility can change.
+          This APK is signed with Android's standard debug key for public evaluation and device testing. It is not a production-signed Play Store release. The official Instagram and Threads websites control login, site markup, and feature availability, so compatibility can change. Device verification is still recommended.
 
           SOURCE CODE
-          https://github.com/prathyushin/Doomscroll-/tree/v1.2.0-shared-login-media
+          https://github.com/prathyushin/Doomscroll-/tree/v1.2.1-privacy-hardening
 
           BUG REPORTS
           https://github.com/prathyushin/Doomscroll-/issues/new?template=bug_report.yml"
 
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" DoomScroll-v1.2.0.apk SHA256SUMS.txt --clobber
+            gh release upload "$TAG" DoomScroll-v1.2.1.apk SHA256SUMS.txt --clobber
             gh release edit "$TAG" --title "$TITLE" --notes "$NOTES" --latest
           else
-            gh release create "$TAG" DoomScroll-v1.2.0.apk SHA256SUMS.txt \
+            gh release create "$TAG" DoomScroll-v1.2.1.apk SHA256SUMS.txt \
               --title "$TITLE" \
               --notes "$NOTES" \
               --latest \
