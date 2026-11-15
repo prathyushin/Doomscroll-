@@ -60,8 +60,8 @@ fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
     var storyUser by remember { mutableStateOf<String?>(null) }
     var mutedUsers by remember { mutableStateOf(emptySet<String>()) }
 
-    BackHandler(enabled = canGoBack && !isFullscreen) {
-        browserHost?.goBack()
+    BackHandler(enabled = isFullscreen || canGoBack) {
+        if (isFullscreen) browserHost?.exitFullscreen() else browserHost?.goBack()
     }
 
     LaunchedEffect(dockPulse, isMediaViewer, isFullscreen) {
