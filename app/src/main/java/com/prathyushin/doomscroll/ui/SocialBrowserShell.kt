@@ -43,6 +43,7 @@ fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
     var provider by remember { mutableStateOf(SocialProvider.INSTAGRAM) }
     var mutedUsers by remember { mutableStateOf(emptySet<String>()) }
     var selectedStoryUser by remember { mutableStateOf<String?>(null) }
+    var showAbout by remember { mutableStateOf(false) }
     var dockExpanded by remember { mutableStateOf(false) }
     var dockVisible by remember { mutableStateOf(true) }
     var browserHost by remember { mutableStateOf<SocialBrowserHostView?>(null) }
@@ -158,6 +159,19 @@ fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
                             dockExpanded = false
                             dockVisible = false
                         }
+                        TextButton(
+                            onClick = {
+                                showAbout = true
+                                dockExpanded = false
+                            },
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp)
+                        ) {
+                            Text(
+                                "About",
+                                color = TextWhite.copy(alpha = 0.72f),
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                        }
                     }
                 }
                 FilledIconButton(
@@ -177,6 +191,26 @@ fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
             }
             }
         }
+    }
+
+    if (showAbout) {
+        AlertDialog(
+            onDismissRequest = { showAbout = false },
+            title = { Text("Doom Scroll") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("Built by Pranav & Pratyush", fontWeight = FontWeight.Medium)
+                    Text(
+                        "An independent project.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextWhite.copy(alpha = 0.68f)
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showAbout = false }) { Text("Close") }
+            }
+        )
     }
 
     selectedStoryUser?.let { username ->
