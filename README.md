@@ -43,11 +43,10 @@ These controls operate on the website UI and routes exposed to the embedded WebV
 
 The following requested features are specified in [issue #6](https://github.com/prathyushin/Doomscroll-/issues/6), but are not implemented in this branch:
 
-### Usage Activity and usage limits
+### Usage limits
 
 - A configurable usage limit is not currently implemented. The Usage Activity screen is informational and does not interrupt browsing with limit banners or countdowns.
-- The planned usage-limit controls belong only in **Settings** or **Usage Activity**. They must not appear as repeated banners, countdowns, or interruptions during normal browsing.
-- When implemented, measurement must count only the visible active tab while Doom Scroll is foregrounded, pause when backgrounded or the screen is off, and store the data locally by default. It must be labelled as usage **inside Doom Scroll**, not usage in the separate official Instagram or Threads apps.
+- If limits are added later, their controls belong only in **Settings** or **Usage Activity**—never as repeated in-feed warnings or interruptions.
 
 ### Important-only notifications
 
