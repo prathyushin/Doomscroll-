@@ -8,7 +8,6 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.draw.clip
@@ -40,8 +39,7 @@ private val TextWhite = Color(0xFFF5F5F5)
 private val Accent = Color(0xFFB7A0A4)
 
 @Composable
-fun DoomScrollApp(isAppForeground: Boolean, onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
-    val context = androidx.compose.ui.platform.LocalContext.current
+fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
     var provider by remember { mutableStateOf(SocialProvider.INSTAGRAM) }
     var mutedUsers by remember { mutableStateOf(emptySet<String>()) }
     var selectedStoryUser by remember { mutableStateOf<String?>(null) }
