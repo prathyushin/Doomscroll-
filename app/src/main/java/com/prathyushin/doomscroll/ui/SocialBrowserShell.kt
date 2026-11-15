@@ -1,6 +1,9 @@
 package com.prathyushin.doomscroll.ui
 
 import android.content.Context
+import android.os.SystemClock
+import org.json.JSONObject
+import java.time.LocalDate
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -41,9 +44,10 @@ private val TextWhite = Color(0xFFF5F5F5)
 private val Accent = Color(0xFFB7A0A4)
 private const val PREFS = "doom_scroll_social_preferences"
 private const val MUTED_KEY = "muted_story_usernames"
+private const val USAGE_KEY = "local_daily_usage_v1"
 
 @Composable
-fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
+fun DoomScrollApp(isAppForeground: Boolean, onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val prefs = remember { context.getSharedPreferences(PREFS, Context.MODE_PRIVATE) }
     var provider by remember { mutableStateOf(SocialProvider.INSTAGRAM) }
@@ -57,6 +61,32 @@ fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
     var canGoBack by remember { mutableStateOf(false) }
     var isMediaViewer by remember { mutableStateOf(false) }
     var isFullscreen by remember { mutableStateOf(false) }
+    var showUsage by remember { mutableStateOf(false) }
+    var usageData by remember { mutableStateOf(readUsageData(prefs)) }
+
+    LaunchedEffect(provider, isAppForeground) {
+        if (!isAppForeground) return@LaunchedEffect
+        var lastTick = SystemClock.elapsedRealtime()
+        addUsageInterval(prefs, provider, 0L, startSession = true)
+        usageData = readUsageData(prefs)
+        try {
+            while (true) {
+                delay(1000)
+                val now = SystemClock.elapsedRealtime()
+                val elapsed = (now - lastTick).coerceAtLeast(0L)
+                lastTick = now
+                if (elapsed > 0L) {
+                    addUsageInterval(prefs, provider, elapsed, startSession = false)
+                    usageData = readUsageData(prefs)
+                }
+            }
+        } finally {
+            val now = SystemClock.elapsedRealtime()
+            val elapsed = (now - lastTick).coerceAtLeast(0L)
+            if (elapsed > 0L) addUsageInterval(prefs, provider, elapsed, startSession = false)
+            usageData = readUsageData(prefs)
+        }
+    }
 
     LaunchedEffect(dockExpanded, dockVisible, isMediaViewer, isFullscreen) {
         if (isMediaViewer || isFullscreen) {
@@ -167,6 +197,16 @@ fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
                             dockExpanded = false
                             dockVisible = false
                         }
+                        OutlinedButton(
+                            onClick = {
+                                usageData = readUsageData(prefs)
+                                showUsage = true
+                                dockExpanded = false
+                            },
+                            shape = RoundedCornerShape(22.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = TextWhite),
+                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp)
+                        ) { Text("Usage") }
                     }
                 }
                 FilledIconButton(
@@ -186,6 +226,29 @@ fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
             }
             }
         }
+    }
+
+    if (showUsage) {
+        AlertDialog(
+            onDismissRequest = { showUsage = false },
+            title = { Text("Usage Activity") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Today · inside Doom Scroll", fontWeight = FontWeight.SemiBold)
+                    Text("Instagram  ${formatUsageDuration(usageData.instagramTodayMs)}")
+                    Text("Threads  ${formatUsageDuration(usageData.threadsTodayMs)}")
+                    Text("Combined  ${formatUsageDuration(usageData.instagramTodayMs + usageData.threadsTodayMs)}")
+                    Text("Sessions  ${usageData.instagramTodaySessions + usageData.threadsTodaySessions} · Avg. ${formatUsageDuration(usageData.averageSessionMs)}")
+                    Divider(color = TextWhite.copy(alpha = 0.15f))
+                    Text("Last 7 days", fontWeight = FontWeight.SemiBold)
+                    usageData.week.forEach { day ->
+                        Text("${day.first}  ${formatUsageDuration(day.second)}")
+                    }
+                    Text("These totals measure Doom Scroll foreground time, not usage in the separate Instagram or Threads apps.", style = MaterialTheme.typography.bodySmall, color = TextWhite.copy(alpha = 0.7f))
+                }
+            },
+            confirmButton = { TextButton(onClick = { showUsage = false }) { Text("Done") } }
+        )
     }
 
     selectedStoryUser?.let { username ->
@@ -212,6 +275,64 @@ fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
             }
         )
     }
+}
+
+
+private data class UsageData(
+    val instagramTodayMs: Long,
+    val threadsTodayMs: Long,
+    val instagramTodaySessions: Int,
+    val threadsTodaySessions: Int,
+    val averageSessionMs: Long,
+    val week: List<Pair<String, Long>>
+)
+
+private fun addUsageInterval(
+    prefs: android.content.SharedPreferences,
+    provider: SocialProvider,
+    elapsedMs: Long,
+    startSession: Boolean
+) {
+    val root = runCatching { JSONObject(prefs.getString(USAGE_KEY, "{}") ?: "{}") }
+        .getOrElse { JSONObject() }
+    val date = LocalDate.now().toString()
+    val day = root.optJSONObject(date) ?: JSONObject()
+    val prefix = if (provider == SocialProvider.INSTAGRAM) "instagram" else "threads"
+    val timeKey = "${prefix}_ms"
+    val sessionsKey = "${prefix}_sessions"
+    day.put(timeKey, day.optLong(timeKey) + elapsedMs)
+    if (startSession) day.put(sessionsKey, day.optInt(sessionsKey) + 1)
+    root.put(date, day)
+    prefs.edit().putString(USAGE_KEY, root.toString()).apply()
+}
+
+private fun readUsageData(prefs: android.content.SharedPreferences): UsageData {
+    val root = runCatching { JSONObject(prefs.getString(USAGE_KEY, "{}") ?: "{}") }
+        .getOrElse { JSONObject() }
+    val today = root.optJSONObject(LocalDate.now().toString()) ?: JSONObject()
+    val instagramMs = today.optLong("instagram_ms")
+    val threadsMs = today.optLong("threads_ms")
+    val instagramSessions = today.optInt("instagram_sessions")
+    val threadsSessions = today.optInt("threads_sessions")
+    val sessions = instagramSessions + threadsSessions
+    val totalMs = instagramMs + threadsMs
+    val week = (0..6).map { offset ->
+        val date = LocalDate.now().minusDays(offset.toLong())
+        val day = root.optJSONObject(date.toString()) ?: JSONObject()
+        val label = if (offset == 0) "Today" else date.dayOfWeek.name.lowercase().replaceFirstChar { it.uppercase() }
+        label to (day.optLong("instagram_ms") + day.optLong("threads_ms"))
+    }.reversed()
+    return UsageData(
+        instagramMs, threadsMs, instagramSessions, threadsSessions,
+        if (sessions > 0) totalMs / sessions else 0L, week
+    )
+}
+
+private fun formatUsageDuration(milliseconds: Long): String {
+    val minutes = milliseconds.coerceAtLeast(0L) / 60_000L
+    val hours = minutes / 60L
+    val remainder = minutes % 60L
+    return if (hours > 0L) "${hours}h ${remainder}m" else "${remainder}m"
 }
 
 @Composable
