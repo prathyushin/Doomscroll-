@@ -478,7 +478,7 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
                 if (window.__doomScrollFollowingFeedSelected) return;
                 const candidates = Array.from(document.querySelectorAll('header [role="tab"], header button, header a[role="tab"], [role="tab"]'));
                 const following = candidates.find(function(node) {
-                  return (node.innerText || node.getAttribute('aria-label') || '').trim().replace(/\\s+/g, ' ').toLowerCase() === 'following';
+                  return (node.innerText || node.getAttribute('aria-label') || '').trim().replace(/\s+/g, ' ').toLowerCase() === 'following';
                 });
                 if (following && following.getAttribute('aria-selected') !== 'true') {
                   following.click();
@@ -703,7 +703,7 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
                 if (window.__doomScrollThreadsFollowingSelected) return;
                 const candidates = Array.from(document.querySelectorAll('[role="tab"],header button,header a[role="tab"]'));
                 const following = candidates.find(function(node) {
-                  return (node.innerText || node.getAttribute('aria-label') || '').trim().replace(/\\s+/g, ' ').toLowerCase() === 'following';
+                  return (node.innerText || node.getAttribute('aria-label') || '').trim().replace(/\s+/g, ' ').toLowerCase() === 'following';
                 });
                 if (following && following.getAttribute('aria-selected') !== 'true') {
                   following.click();
