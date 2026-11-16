@@ -2,9 +2,20 @@ name: Android Build
 
 on:
   push:
-    branches: ["main", "v1-release-hardening", "mvp-webview-social-shell", "v1.1.1-ux-threads-fix", "v1.2.1-shared-login-media"]
+    branches:
+      - "main"
+      - "v1-release-hardening"
+      - "mvp-webview-social-shell"
+      - "v1.1.1-ux-threads-fix"
+      - "v1.2.1-privacy-hardening"
+      - "v2.0.0-development"
   pull_request:
-    branches: ["main", "v1-release-hardening", "v1.1.1-ux-threads-fix"]
+    branches:
+      - "main"
+      - "v1-release-hardening"
+      - "v1.1.1-ux-threads-fix"
+      - "v1.2.1-privacy-hardening"
+      - "v2.0.0-development"
   workflow_dispatch:
 
 jobs:
@@ -56,14 +67,14 @@ jobs:
         run: gradle bundleRelease
 
       - name: Name installable debug APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk DoomScroll-v1.2.1-debug-installable.apk
+        run: cp app/build/outputs/apk/debug/app-debug.apk DoomScroll-v2.0.0-debug-installable.apk
 
       - name: Upload installable and release artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: DoomScroll-v1.2.1-build
+          name: DoomScroll-v2.0.0-build
           path: |
-            DoomScroll-v1.2.1-debug-installable.apk
+            DoomScroll-v2.0.0-debug-installable.apk
             app/build/outputs/apk/release/app-release*.apk
             app/build/outputs/bundle/release/app-release.aab
           if-no-files-found: error

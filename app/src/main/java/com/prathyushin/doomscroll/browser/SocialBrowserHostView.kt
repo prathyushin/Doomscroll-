@@ -13,6 +13,9 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.FrameLayout
 import org.json.JSONArray
+import org.json.JSONObject
+import com.prathyushin.doomscroll.feed.FeedFirewallSettings
+import com.prathyushin.doomscroll.feed.LearningFocusSettings
 
 enum class SocialProvider(val startUrl: String) {
     INSTAGRAM("https://www.instagram.com/"),
@@ -29,6 +32,11 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
     private val threadsView = createWebView(SocialProvider.THREADS)
     private var activeProvider = SocialProvider.INSTAGRAM
     private var mutedUsernames: Set<String> = emptySet()
+    private var learningSettings = LearningFocusSettings()
+    private var feedSettings = mapOf(
+        SocialProvider.INSTAGRAM to FeedFirewallSettings(),
+        SocialProvider.THREADS to FeedFirewallSettings()
+    )
     private var allowCurrentReelFromDm = false
     private var destroyed = false
     private var onCanGoBackChanged: ((Boolean) -> Unit)? = null
@@ -97,6 +105,10 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
         if (activeProvider == provider) {
             val sameTarget = currentView()
             if (sameTarget.url.isNullOrBlank()) sameTarget.loadUrl(provider.startUrl)
+            else {
+                applyFeedFirewall(sameTarget, provider)
+                if (provider == SocialProvider.THREADS) applyThreadsControls(sameTarget)
+            }
             return
         }
         activeProvider = provider
@@ -104,8 +116,28 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
         threadsView.visibility = if (provider == SocialProvider.THREADS) View.VISIBLE else View.GONE
         val target = currentView()
         if (target.url.isNullOrBlank()) target.loadUrl(provider.startUrl)
+        else {
+            applyFeedFirewall(target, provider)
+            if (provider == SocialProvider.THREADS) applyThreadsControls(target)
+        }
         target.onResume()
         notifyBackState()
+    }
+
+    fun setLearningFocusSettings(settings: LearningFocusSettings) {
+        val normalized = settings.normalized()
+        if (learningSettings == normalized) return
+        learningSettings = normalized
+        applyFeedFirewall(currentView(), activeProvider)
+    }
+
+    fun setFeedFirewallSettings(provider: SocialProvider, settings: FeedFirewallSettings) {
+        val normalized = settings.normalized()
+        if (feedSettings[provider] == normalized) return
+        feedSettings = feedSettings + (provider to normalized)
+        val target = currentViewFor(provider)
+        applyFeedFirewall(target, provider)
+        if (provider == SocialProvider.THREADS) applyThreadsControls(target)
     }
 
     fun setMutedUsernames(usernames: Set<String>) {
@@ -336,9 +368,13 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
                 when (provider) {
                     SocialProvider.INSTAGRAM -> {
                         applyInstagramControls(view)
+                        applyFeedFirewall(view, provider)
                         installMediaViewerObserver(view)
                     }
-                    SocialProvider.THREADS -> applyThreadsControls(view)
+                    SocialProvider.THREADS -> {
+                        applyFeedFirewall(view, provider)
+                        applyThreadsControls(view)
+                    }
                 }
                 if (view === currentView()) notifyBackState()
             }
@@ -373,7 +409,8 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
 
         if (provider == SocialProvider.INSTAGRAM) {
             val path = uri.path.orEmpty()
-            if (SocialRoutePolicy.isBlockedInstagramPath(path)) {
+            if (SocialRoutePolicy.isBlockedInstagramPath(path) &&
+                feedSettings[provider]?.hideReelsEntryPoints == true) {
                 view.post { view.loadUrl(SocialProvider.INSTAGRAM.startUrl) }
                 return true
             }
@@ -461,9 +498,6 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
                 document.documentElement.appendChild(style);
               }
               style.textContent = [
-                'a[href^="/explore"], a[href^="/reels"],',
-                '[aria-label="Explore"], [aria-label="Reels"],',
-                'nav a[href*="/explore"], nav a[href*="/reels"],',
                 '.doom-scroll-muted-story { display:none !important; }'
               ].join('');
 
@@ -492,6 +526,12 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
               }
 
               function hideSuggestedPosts() {
+                document.querySelectorAll('[data-doom-scroll-suggested-hidden="1"]').forEach(function(node) {
+                  if (!c.hideSuggestedAccounts) {
+                    node.style.removeProperty('display');
+                    delete node.dataset.doomScrollSuggestedHidden;
+                  }
+                });
                 document.querySelectorAll('article,[role="article"]').forEach(function(article) {
                   const text = (article.innerText || '').toLowerCase();
                   if (text.includes('suggested for you') || text.includes('suggested posts') ||
@@ -503,14 +543,12 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
 
               function installFeedCleanup() {
                 selectFollowingFeed();
-                hideSuggestedPosts();
                 if (!window.__doomScrollFeedCleanupObserver) {
                   let timer = null;
                   window.__doomScrollFeedCleanupObserver = new MutationObserver(function() {
                     if (timer) clearTimeout(timer);
                     timer = setTimeout(function() {
                       selectFollowingFeed();
-                      hideSuggestedPosts();
                     }, 300);
                   });
                   window.__doomScrollFeedCleanupObserver.observe(document.documentElement, {
@@ -613,7 +651,6 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
                 installStoryLongPress();
               }
 
-              hideTrapNavigation();
               installFeedCleanup();
               attachStoryTrayObserver();
               const storyDiscoveryRoot = document.querySelector('header,[role="banner"]');
@@ -692,6 +729,110 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
         target.evaluateJavascript(script, null)
     }
 
+    /**
+     * Best-effort local filtering of clearly labelled UI modules.
+     * Never removes direct messages, ordinary post content, or entire feeds.
+     */
+    private fun applyFeedFirewall(target: WebView, provider: SocialProvider) {
+        if (destroyed || target.url.isNullOrBlank()) return
+        val settings = feedSettings[provider] ?: FeedFirewallSettings()
+        val config = JSONObject()
+            .put("hideRecommendations", settings.hideRecommendations)
+            .put("hideSuggestedAccounts", settings.hideSuggestedAccounts)
+            .put("hideReelsEntryPoints", settings.hideReelsEntryPoints)
+            .put("hiddenAccounts", JSONArray(settings.hiddenAccounts.toList()))
+            .put("learningEnabled", learningSettings.enabled)
+            .put("learningTopics", JSONArray(learningSettings.topics.toList()))
+        val script = """
+            (function() {
+              const config = $config;
+              const key = 'doomScrollFirewall';
+              window[key] = config;
+              const styleId = 'doom-scroll-firewall';
+              let style = document.getElementById(styleId);
+              if (!style) {
+                style = document.createElement('style');
+                style.id = styleId;
+                document.documentElement.appendChild(style);
+              }
+              function apply() {
+                const c = window[key] || {};
+                const hidden = new Set(c.hiddenAccounts || []);
+                document.querySelectorAll('a[href],button,[role="tab"]').forEach(function(node) {
+                  const href = (node.getAttribute('href') || '').toLowerCase();
+                  const label = ((node.getAttribute('aria-label') || '') + ' ' +
+                    (node.innerText || '')).trim().replace(/\s+/g, ' ').toLowerCase();
+                  if (c.hideReelsEntryPoints && (href.startsWith('/reels') || href.startsWith('/explore') ||
+                      label === 'reels' || label === 'reel' || label === 'explore')) {
+                    node.dataset.doomScrollReelsHidden = '1';
+                    node.style.setProperty('display', 'none', 'important');
+                  } else if (!c.hideReelsEntryPoints && node.dataset.doomScrollReelsHidden === '1') {
+                    node.style.removeProperty('display');
+                    delete node.dataset.doomScrollReelsHidden;
+                  }
+                  if (c.hideSuggestedAccounts && /suggested accounts|people you may know|suggested for you/.test(label)) {
+                    const module = node.closest('section,[role="region"],[data-testid]') || node;
+                    module.dataset.doomScrollSuggestedHidden = '1';
+                    module.style.setProperty('display', 'none', 'important');
+                  }
+                });
+                document.querySelectorAll('article,[role="article"]').forEach(function(article) {
+                  const text = (article.innerText || '').toLowerCase();
+                  if (c.hideRecommendations && /suggested for you|suggested posts|recommended for you|because you follow/.test(text)) {
+                    article.dataset.doomScrollRecommendationHidden = '1';
+                    article.style.setProperty('display', 'none', 'important');
+                  } else if (!c.hideRecommendations && article.dataset.doomScrollRecommendationHidden === '1') {
+                    article.style.removeProperty('display');
+                    delete article.dataset.doomScrollRecommendationHidden;
+                  }
+                  if (c.learningEnabled && (c.learningTopics || []).length) {
+                    const matchesTopic = c.learningTopics.some(function(topic) { return text.includes(topic); });
+                    if (!matchesTopic) {
+                      article.dataset.doomScrollLearningHidden = '1';
+                      article.style.setProperty('display', 'none', 'important');
+                    } else if (article.dataset.doomScrollLearningHidden === '1') {
+                      article.style.removeProperty('display');
+                      delete article.dataset.doomScrollLearningHidden;
+                    }
+                  } else if (article.dataset.doomScrollLearningHidden === '1') {
+                    article.style.removeProperty('display');
+                    delete article.dataset.doomScrollLearningHidden;
+                  }
+                  if (hidden.size) {
+                    const links = Array.from(article.querySelectorAll('a[href]'));
+                    const matched = links.some(function(link) {
+                      try {
+                        const parts = new URL(link.href, location.origin).pathname.split('/').filter(Boolean);
+                        return parts.length > 0 && hidden.has((parts[0] || '').toLowerCase());
+                      } catch (_) { return false; }
+                    });
+                    if (matched) {
+                      article.dataset.doomScrollAccountHidden = '1';
+                      article.style.setProperty('display', 'none', 'important');
+                    } else if (article.dataset.doomScrollAccountHidden === '1') {
+                      article.style.removeProperty('display');
+                      delete article.dataset.doomScrollAccountHidden;
+                    }
+                  } else if (article.dataset.doomScrollAccountHidden === '1') {
+                    article.style.removeProperty('display');
+                    delete article.dataset.doomScrollAccountHidden;
+                  }
+                });
+              }
+              apply();
+              if (!window.__doomScrollFirewallObserver) {
+                let timer = null;
+                window.__doomScrollFirewallObserver = new MutationObserver(function() {
+                  if (timer) clearTimeout(timer);
+                  timer = setTimeout(apply, 450);
+                });
+                window.__doomScrollFirewallObserver.observe(document.documentElement, {childList:true,subtree:true});
+              }
+            })();
+        """.trimIndent()
+        target.evaluateJavascript(script, null)
+    }
+
     private fun applyThreadsControls(target: WebView = threadsView) {
         if (destroyed || target.url.isNullOrBlank()) return
         val script = """
@@ -705,6 +846,7 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
               }
               style.textContent = '.doom-scroll-threads-for-you { display:none !important; }';
               function selectFollowingTab() {
+                if (!(window.__doomScrollFirewall && window.__doomScrollFirewall.hideRecommendations)) return;
                 if (window.__doomScrollThreadsFollowingSelected) return;
                 const candidates = Array.from(document.querySelectorAll('[role="tab"],header button,header a[role="tab"]'));
                 const following = candidates.find(function(node) {
@@ -725,18 +867,16 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
                 });
               }
               function hideForYouTab() {
+                const shouldHide = !!(window.__doomScrollFirewall && window.__doomScrollFirewall.hideRecommendations);
                 document.querySelectorAll('a[href],button,[role="tab"]').forEach(function(node) {
                   const label = ((node.getAttribute('aria-label') || '') + ' ' +
                     (node.innerText || '')).trim().replace(/\s+/g, ' ').toLowerCase();
-                  if (label === 'for you') node.classList.add('doom-scroll-threads-for-you');
-                  else if (node.classList.contains('doom-scroll-threads-for-you')) {
-                    node.classList.remove('doom-scroll-threads-for-you');
-                  }
+                  if (label === 'for you' && shouldHide) node.classList.add('doom-scroll-threads-for-you');
+                  else if (node.classList.contains('doom-scroll-threads-for-you')) node.classList.remove('doom-scroll-threads-for-you');
                 });
               }
               hideForYouTab();
               selectFollowingTab();
-              hideSuggestedThreads();
               if (!window.__doomScrollThreadsObserver) {
                 let timer = null;
                 window.__doomScrollThreadsObserver = new MutationObserver(function() {
@@ -744,7 +884,6 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
                   timer = setTimeout(function() {
                     hideForYouTab();
                     selectFollowingTab();
-                    hideSuggestedThreads();
                   }, 350);
                 });
                 window.__doomScrollThreadsObserver.observe(document.documentElement, {
