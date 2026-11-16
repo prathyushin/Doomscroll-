@@ -127,7 +127,9 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
         val normalized = settings.normalized()
         if (feedSettings[provider] == normalized) return
         feedSettings = feedSettings + (provider to normalized)
-        applyFeedFirewall(currentViewFor(provider), provider)
+        val target = currentViewFor(provider)
+        applyFeedFirewall(target, provider)
+        if (provider == SocialProvider.THREADS) applyThreadsControls(target)
     }
 
     fun setMutedUsernames(usernames: Set<String>) {
@@ -362,8 +364,8 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
                         installMediaViewerObserver(view)
                     }
                     SocialProvider.THREADS -> {
-                        applyThreadsControls(view)
                         applyFeedFirewall(view, provider)
+                        applyThreadsControls(view)
                     }
                 }
                 if (view === currentView()) notifyBackState()
