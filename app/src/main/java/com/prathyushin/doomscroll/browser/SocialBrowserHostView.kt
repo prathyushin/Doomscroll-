@@ -105,6 +105,10 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
         if (activeProvider == provider) {
             val sameTarget = currentView()
             if (sameTarget.url.isNullOrBlank()) sameTarget.loadUrl(provider.startUrl)
+            else {
+                applyFeedFirewall(sameTarget, provider)
+                if (provider == SocialProvider.THREADS) applyThreadsControls(sameTarget)
+            }
             return
         }
         activeProvider = provider
@@ -112,6 +116,10 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
         threadsView.visibility = if (provider == SocialProvider.THREADS) View.VISIBLE else View.GONE
         val target = currentView()
         if (target.url.isNullOrBlank()) target.loadUrl(provider.startUrl)
+        else {
+            applyFeedFirewall(target, provider)
+            if (provider == SocialProvider.THREADS) applyThreadsControls(target)
+        }
         target.onResume()
         notifyBackState()
     }
