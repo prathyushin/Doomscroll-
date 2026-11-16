@@ -48,7 +48,6 @@ import com.prathyushin.doomscroll.feed.DoomScrollPreferences
 import com.prathyushin.doomscroll.feed.DoomScrollPreferencesStore
 import com.prathyushin.doomscroll.feed.FeedProfile
 import com.prathyushin.doomscroll.feed.FeedFirewallSettings
-import com.prathyushin.doomscroll.feed.LearningFocusMode
 import kotlinx.coroutines.delay
 
 private val Black = Color(0xFF000000)
@@ -413,14 +412,6 @@ private fun DoomScrollControlsPage(
             FirewallSwitch("Enable topic-based feed filtering", preferences.learning.enabled) {
                 onPreferencesChange(preferences.copy(learning = preferences.learning.copy(enabled = it)))
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip(selected = preferences.learning.mode == LearningFocusMode.TOPIC_FILTER,
-                    onClick = { onPreferencesChange(preferences.copy(learning = preferences.learning.copy(mode = LearningFocusMode.TOPIC_FILTER))) },
-                    label = { Text("Topic filter") })
-                FilterChip(selected = preferences.learning.mode == LearningFocusMode.TOPIC_SESSION,
-                    onClick = { onPreferencesChange(preferences.copy(learning = preferences.learning.copy(mode = LearningFocusMode.TOPIC_SESSION))) },
-                    label = { Text("Topic session") })
-            }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(value = topicDraft, onValueChange = { topicDraft = it.take(40) },
                     modifier = Modifier.weight(1f), singleLine = true, placeholder = { Text("e.g. Kotlin, design") })
@@ -448,9 +439,6 @@ private fun DoomScrollControlsPage(
             Slider(value = preferences.focus.sessionLimitMinutes.toFloat(), onValueChange = { value ->
                 onPreferencesChange(preferences.copy(focus = preferences.focus.copy(sessionLimitMinutes = value.toInt())))
             }, valueRange = 0f..240f, steps = 15)
-            FirewallSwitch("Scroll checkpoints (off by default)", preferences.focus.scrollCheckpoints) {
-                onPreferencesChange(preferences.copy(focus = preferences.focus.copy(scrollCheckpoints = it)))
-            }
             FirewallSwitch("Reduced motion preference", preferences.comfort.reducedMotion) {
                 onPreferencesChange(preferences.copy(comfort = preferences.comfort.copy(reducedMotion = it)))
             }
