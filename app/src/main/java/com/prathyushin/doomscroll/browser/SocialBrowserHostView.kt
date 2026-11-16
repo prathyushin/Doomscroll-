@@ -15,6 +15,7 @@ import android.widget.FrameLayout
 import org.json.JSONArray
 import org.json.JSONObject
 import com.prathyushin.doomscroll.feed.FeedFirewallSettings
+import com.prathyushin.doomscroll.feed.LearningFocusSettings
 
 enum class SocialProvider(val startUrl: String) {
     INSTAGRAM("https://www.instagram.com/"),
@@ -31,6 +32,7 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
     private val threadsView = createWebView(SocialProvider.THREADS)
     private var activeProvider = SocialProvider.INSTAGRAM
     private var mutedUsernames: Set<String> = emptySet()
+    private var learningSettings = LearningFocusSettings()
     private var feedSettings = mapOf(
         SocialProvider.INSTAGRAM to FeedFirewallSettings(),
         SocialProvider.THREADS to FeedFirewallSettings()
@@ -112,6 +114,13 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
         if (target.url.isNullOrBlank()) target.loadUrl(provider.startUrl)
         target.onResume()
         notifyBackState()
+    }
+
+    fun setLearningFocusSettings(settings: LearningFocusSettings) {
+        val normalized = settings.normalized()
+        if (learningSettings == normalized) return
+        learningSettings = normalized
+        applyFeedFirewall(currentView(), activeProvider)
     }
 
     fun setFeedFirewallSettings(provider: SocialProvider, settings: FeedFirewallSettings) {
@@ -721,6 +730,8 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
             .put("hideSuggestedAccounts", settings.hideSuggestedAccounts)
             .put("hideReelsEntryPoints", settings.hideReelsEntryPoints)
             .put("hiddenAccounts", JSONArray(settings.hiddenAccounts.toList()))
+            .put("learningEnabled", learningSettings.enabled)
+            .put("learningTopics", JSONArray(learningSettings.topics.toList()))
         val script = """
             (function() {
               const config = $config;
@@ -742,22 +753,39 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
                     (node.innerText || '')).trim().replace(/\s+/g, ' ').toLowerCase();
                   if (c.hideReelsEntryPoints && (href.startsWith('/reels') ||
                       label === 'reels' || label === 'reel')) {
+                    node.dataset.doomScrollReelsHidden = '1';
                     node.style.setProperty('display', 'none', 'important');
-                  } else if (!c.hideReelsEntryPoints &&
-                      node.dataset.doomScrollReelsHidden === '1') {
+                  } else if (!c.hideReelsEntryPoints && node.dataset.doomScrollReelsHidden === '1') {
                     node.style.removeProperty('display');
+                    delete node.dataset.doomScrollReelsHidden;
                   }
                   if (c.hideSuggestedAccounts && /suggested accounts|people you may know|suggested for you/.test(label)) {
                     const module = node.closest('section,[role="region"],[data-testid]') || node;
+                    module.dataset.doomScrollSuggestedHidden = '1';
                     module.style.setProperty('display', 'none', 'important');
                   }
                 });
                 document.querySelectorAll('article,[role="article"]').forEach(function(article) {
                   const text = (article.innerText || '').toLowerCase();
                   if (c.hideRecommendations && /suggested for you|suggested posts|recommended for you|because you follow/.test(text)) {
+                    article.dataset.doomScrollRecommendationHidden = '1';
                     article.style.setProperty('display', 'none', 'important');
                   } else if (!c.hideRecommendations && article.dataset.doomScrollRecommendationHidden === '1') {
                     article.style.removeProperty('display');
+                    delete article.dataset.doomScrollRecommendationHidden;
+                  }
+                  if (c.learningEnabled && (c.learningTopics || []).length) {
+                    const matchesTopic = c.learningTopics.some(function(topic) { return text.includes(topic); });
+                    if (!matchesTopic) {
+                      article.dataset.doomScrollLearningHidden = '1';
+                      article.style.setProperty('display', 'none', 'important');
+                    } else if (article.dataset.doomScrollLearningHidden === '1') {
+                      article.style.removeProperty('display');
+                      delete article.dataset.doomScrollLearningHidden;
+                    }
+                  } else if (article.dataset.doomScrollLearningHidden === '1') {
+                    article.style.removeProperty('display');
+                    delete article.dataset.doomScrollLearningHidden;
                   }
                   if (hidden.size) {
                     const links = Array.from(article.querySelectorAll('a[href]'));
@@ -767,7 +795,13 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
                         return parts.length > 0 && hidden.has((parts[0] || '').toLowerCase());
                       } catch (_) { return false; }
                     });
-                    if (matched) article.style.setProperty('display', 'none', 'important');
+                    if (matched) {
+                      article.dataset.doomScrollAccountHidden = '1';
+                      article.style.setProperty('display', 'none', 'important');
+                    } else if (article.dataset.doomScrollAccountHidden === '1') {
+                      article.style.removeProperty('display');
+                      delete article.dataset.doomScrollAccountHidden;
+                    }
                   }
                 });
               }
