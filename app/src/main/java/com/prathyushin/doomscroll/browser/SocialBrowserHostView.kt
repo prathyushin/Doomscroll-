@@ -399,7 +399,8 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
 
         if (provider == SocialProvider.INSTAGRAM) {
             val path = uri.path.orEmpty()
-            if (SocialRoutePolicy.isBlockedInstagramPath(path)) {
+            if (SocialRoutePolicy.isBlockedInstagramPath(path) &&
+                feedSettings[provider]?.hideReelsEntryPoints == true) {
                 view.post { view.loadUrl(SocialProvider.INSTAGRAM.startUrl) }
                 return true
             }
@@ -487,9 +488,6 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
                 document.documentElement.appendChild(style);
               }
               style.textContent = [
-                'a[href^="/explore"], a[href^="/reels"],',
-                '[aria-label="Explore"], [aria-label="Reels"],',
-                'nav a[href*="/explore"], nav a[href*="/reels"],',
                 '.doom-scroll-muted-story { display:none !important; }'
               ].join('');
 
@@ -643,7 +641,6 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
                 installStoryLongPress();
               }
 
-              hideTrapNavigation();
               installFeedCleanup();
               attachStoryTrayObserver();
               const storyDiscoveryRoot = document.querySelector('header,[role="banner"]');
@@ -755,8 +752,8 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
                   const href = (node.getAttribute('href') || '').toLowerCase();
                   const label = ((node.getAttribute('aria-label') || '') + ' ' +
                     (node.innerText || '')).trim().replace(/\s+/g, ' ').toLowerCase();
-                  if (c.hideReelsEntryPoints && (href.startsWith('/reels') ||
-                      label === 'reels' || label === 'reel')) {
+                  if (c.hideReelsEntryPoints && (href.startsWith('/reels') || href.startsWith('/explore') ||
+                      label === 'reels' || label === 'reel' || label === 'explore')) {
                     node.dataset.doomScrollReelsHidden = '1';
                     node.style.setProperty('display', 'none', 'important');
                   } else if (!c.hideReelsEntryPoints && node.dataset.doomScrollReelsHidden === '1') {
@@ -806,6 +803,9 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
                       article.style.removeProperty('display');
                       delete article.dataset.doomScrollAccountHidden;
                     }
+                  } else if (article.dataset.doomScrollAccountHidden === '1') {
+                    article.style.removeProperty('display');
+                    delete article.dataset.doomScrollAccountHidden;
                   }
                 });
               }
@@ -836,6 +836,7 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
               }
               style.textContent = '.doom-scroll-threads-for-you { display:none !important; }';
               function selectFollowingTab() {
+                if (!(window.__doomScrollFirewall && window.__doomScrollFirewall.hideRecommendations)) return;
                 if (window.__doomScrollThreadsFollowingSelected) return;
                 const candidates = Array.from(document.querySelectorAll('[role="tab"],header button,header a[role="tab"]'));
                 const following = candidates.find(function(node) {
@@ -856,13 +857,12 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
                 });
               }
               function hideForYouTab() {
+                const shouldHide = !!(window.__doomScrollFirewall && window.__doomScrollFirewall.hideRecommendations);
                 document.querySelectorAll('a[href],button,[role="tab"]').forEach(function(node) {
                   const label = ((node.getAttribute('aria-label') || '') + ' ' +
                     (node.innerText || '')).trim().replace(/\s+/g, ' ').toLowerCase();
-                  if (label === 'for you') node.classList.add('doom-scroll-threads-for-you');
-                  else if (node.classList.contains('doom-scroll-threads-for-you')) {
-                    node.classList.remove('doom-scroll-threads-for-you');
-                  }
+                  if (label === 'for you' && shouldHide) node.classList.add('doom-scroll-threads-for-you');
+                  else if (node.classList.contains('doom-scroll-threads-for-you')) node.classList.remove('doom-scroll-threads-for-you');
                 });
               }
               hideForYouTab();
