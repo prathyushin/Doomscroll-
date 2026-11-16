@@ -383,7 +383,7 @@ private fun DoomScrollControlsPage(
             FirewallSwitch("Hide suggested accounts", settings.hideSuggestedAccounts) {
                 updateSettings(settings.copy(hideSuggestedAccounts = it))
             }
-            FirewallSwitch("Hide Reels navigation entry points", settings.hideReelsEntryPoints) {
+            FirewallSwitch("Hide Explore and Reels entry points", settings.hideReelsEntryPoints) {
                 updateSettings(settings.copy(hideReelsEntryPoints = it))
             }
             Text("HIDDEN ACCOUNTS", color = TextWhite, fontSize = 11.sp, fontWeight = FontWeight.Bold)
