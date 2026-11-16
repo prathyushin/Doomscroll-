@@ -1,6 +1,9 @@
 package com.prathyushin.doomscroll.ui
 
 import androidx.activity.compose.BackHandler
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
@@ -179,7 +182,8 @@ fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
             // Translucent floating glass dock; it disappears after inactivity.
             AnimatedVisibility(
                 visible = dockVisible && !isMediaViewer && !isFullscreen && !showAbout && !showControls,
-                modifier = Modifier.align(Alignment.BottomCenter),
+                modifier = Modifier.align(if (preferences.comfort.oneHandedDock) Alignment.BottomEnd else Alignment.BottomCenter)
+                    .padding(end = if (preferences.comfort.oneHandedDock) 12.dp else 0.dp),
                 enter = if (preferences.comfort.reducedMotion) EnterTransition.None else fadeIn() + slideInVertically { it / 2 },
                 exit = if (preferences.comfort.reducedMotion) ExitTransition.None else fadeOut() + slideOutVertically { it / 2 }
             ) {
@@ -310,6 +314,9 @@ private fun DoomScrollControlsPage(
     var platform by remember { mutableStateOf(SocialProvider.INSTAGRAM) }
     var accountDraft by remember { mutableStateOf("") }
     var topicDraft by remember { mutableStateOf("") }
+    val context = LocalContext.current
+    val cameraGranted = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+    val microphoneGranted = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
     val settings = if (platform == SocialProvider.INSTAGRAM) preferences.instagram else preferences.threads
     fun updateSettings(next: FeedFirewallSettings) {
         onPreferencesChange(
@@ -450,9 +457,16 @@ private fun DoomScrollControlsPage(
             FirewallSwitch("Larger text preference", preferences.comfort.largerText) {
                 onPreferencesChange(preferences.copy(comfort = preferences.comfort.copy(largerText = it)))
             }
+            FirewallSwitch("Move dock to right for one-handed reach", preferences.comfort.oneHandedDock) {
+                onPreferencesChange(preferences.copy(comfort = preferences.comfort.copy(oneHandedDock = it)))
+            }
             Divider(color = Color.White.copy(alpha = 0.12f))
-            Text("PRIVACY", color = Color(0xFF9AB8F8), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-            Text("Feed preferences are stored on this device. Doom Scroll does not collect analytics. Ad filtering and native notification filtering are not active in this build.", color = TextWhite.copy(alpha = 0.62f), fontSize = 12.sp, lineHeight = 17.sp)
+            Text("PRIVACY & PERMISSIONS", color = Color(0xFF9AB8F8), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            Text("Feed preferences are stored on this device. Analytics are off. These controls do not collect private messages, passwords, contacts or browsing history.", color = TextWhite.copy(alpha = 0.62f), fontSize = 12.sp, lineHeight = 17.sp)
+            Text("Camera permission: ${if (cameraGranted) "Granted" else "Not granted"}", color = TextWhite, fontSize = 12.sp)
+            Text("Microphone permission: ${if (microphoneGranted) "Granted" else "Not granted"}", color = TextWhite, fontSize = 12.sp)
+            Text("Camera and microphone are requested only when an official social page asks to use them. Internet access is required for Instagram and Threads.", color = TextWhite.copy(alpha = 0.55f), fontSize = 11.sp, lineHeight = 15.sp)
+            Text("Not active yet: ad filtering, native notification summaries, community voting and quiet-hour notification scheduling. Doom Scroll does not request notification-listener access.", color = Color(0xFFE0C38A), fontSize = 11.sp, lineHeight = 15.sp)
             Button(onClick = onClose, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(26.dp)) {
                 Text("Done")
             }
