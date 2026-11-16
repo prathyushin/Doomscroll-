@@ -126,7 +126,8 @@ fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
         )
     ) {
         CompositionLocalProvider(
-            LocalDensity provides LocalDensity.current.copy(
+            LocalDensity provides androidx.compose.ui.unit.Density(
+                density = LocalDensity.current.density,
                 fontScale = if (preferences.comfort.largerText) 1.15f else LocalDensity.current.fontScale
             )
         ) {
