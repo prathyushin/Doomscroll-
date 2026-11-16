@@ -42,6 +42,7 @@ import com.prathyushin.doomscroll.feed.DoomScrollPreferences
 import com.prathyushin.doomscroll.feed.DoomScrollPreferencesStore
 import com.prathyushin.doomscroll.feed.FeedProfile
 import com.prathyushin.doomscroll.feed.FeedFirewallSettings
+import com.prathyushin.doomscroll.feed.LearningFocusMode
 import kotlinx.coroutines.delay
 
 private val Black = Color(0xFF000000)
@@ -278,6 +279,7 @@ private fun DoomScrollControlsPage(
 ) {
     var platform by remember { mutableStateOf(SocialProvider.INSTAGRAM) }
     var accountDraft by remember { mutableStateOf("") }
+    var topicDraft by remember { mutableStateOf("") }
     val settings = if (platform == SocialProvider.INSTAGRAM) preferences.instagram else preferences.threads
     fun updateSettings(next: FeedFirewallSettings) {
         onPreferencesChange(
@@ -370,10 +372,45 @@ private fun DoomScrollControlsPage(
                 }
             }
             Divider(color = Color.White.copy(alpha = 0.12f))
-            Text("FOCUS & COMFORT", color = Color(0xFF9AB8F8), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-            FirewallSwitch("Optional Reels speed bump (preference)", preferences.focus.reelsSpeedBump) {
-                onPreferencesChange(preferences.copy(focus = preferences.focus.copy(reelsSpeedBump = it)))
+            Text("LEARNING FOCUS", color = Color(0xFF9AB8F8), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            FirewallSwitch("Enable topic-based feed filtering", preferences.learning.enabled) {
+                onPreferencesChange(preferences.copy(learning = preferences.learning.copy(enabled = it)))
             }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(selected = preferences.learning.mode == LearningFocusMode.TOPIC_FILTER,
+                    onClick = { onPreferencesChange(preferences.copy(learning = preferences.learning.copy(mode = LearningFocusMode.TOPIC_FILTER))) },
+                    label = { Text("Topic filter") })
+                FilterChip(selected = preferences.learning.mode == LearningFocusMode.TOPIC_SESSION,
+                    onClick = { onPreferencesChange(preferences.copy(learning = preferences.learning.copy(mode = LearningFocusMode.TOPIC_SESSION))) },
+                    label = { Text("Topic session") })
+            }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(value = topicDraft, onValueChange = { topicDraft = it.take(40) },
+                    modifier = Modifier.weight(1f), singleLine = true, placeholder = { Text("e.g. Kotlin, design") })
+                Button(onClick = {
+                    val normalized = (preferences.learning.topics + topicDraft).let {
+                        preferences.learning.copy(topics = it).normalized().topics
+                    }
+                    onPreferencesChange(preferences.copy(learning = preferences.learning.copy(topics = normalized)))
+                    topicDraft = ""
+                }, enabled = topicDraft.isNotBlank()) { Text("Add") }
+            }
+            preferences.learning.topics.sorted().forEach { topic ->
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text(topic, color = TextWhite, modifier = Modifier.weight(1f))
+                    TextButton(onClick = { onPreferencesChange(preferences.copy(
+                        learning = preferences.learning.copy(topics = preferences.learning.topics - topic)
+                    )) }) { Text("Remove") }
+                }
+            }
+            Text("Simple on-device text matching on visible post cards; not an AI classifier. It may miss relevant posts or hide unrelated ones.",
+                color = TextWhite.copy(alpha = 0.55f), fontSize = 11.sp, lineHeight = 15.sp)
+            Divider(color = Color.White.copy(alpha = 0.12f))
+            Text("FOCUS & COMFORT", color = Color(0xFF9AB8F8), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            Text("Optional session reminder: ${preferences.focus.sessionLimitMinutes} minutes (0 = off)", color = TextWhite, fontSize = 13.sp)
+            Slider(value = preferences.focus.sessionLimitMinutes.toFloat(), onValueChange = { value ->
+                onPreferencesChange(preferences.copy(focus = preferences.focus.copy(sessionLimitMinutes = value.toInt())))
+            }, valueRange = 0f..240f, steps = 15)
             FirewallSwitch("Scroll checkpoints (off by default)", preferences.focus.scrollCheckpoints) {
                 onPreferencesChange(preferences.copy(focus = preferences.focus.copy(scrollCheckpoints = it)))
             }
