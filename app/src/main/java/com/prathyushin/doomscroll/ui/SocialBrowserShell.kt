@@ -62,6 +62,7 @@ fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
     var selectedStoryUser by remember { mutableStateOf<String?>(null) }
     var showAbout by remember { mutableStateOf(false) }
     var showControls by remember { mutableStateOf(false) }
+    var showSessionReminder by remember { mutableStateOf(false) }
     var dockExpanded by remember { mutableStateOf(false) }
     var dockVisible by remember { mutableStateOf(true) }
     var browserHost by remember { mutableStateOf<SocialBrowserHostView?>(null) }
@@ -73,6 +74,15 @@ fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
         preferencesStore.save(preferences)
         browserHost?.setFeedFirewallSettings(SocialProvider.INSTAGRAM, preferences.instagram)
         browserHost?.setFeedFirewallSettings(SocialProvider.THREADS, preferences.threads)
+        browserHost?.setLearningFocusSettings(preferences.learning)
+    }
+
+    LaunchedEffect(preferences.focus.sessionLimitMinutes) {
+        val minutes = preferences.focus.sessionLimitMinutes
+        if (minutes > 0) {
+            delay(minutes * 60_000L)
+            showSessionReminder = true
+        }
     }
 
     LaunchedEffect(dockExpanded, dockVisible, isMediaViewer, isFullscreen, showAbout, showControls) {
@@ -123,6 +133,7 @@ fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
                         host.setMutedUsernames(mutedUsers)
                         host.setFeedFirewallSettings(SocialProvider.INSTAGRAM, preferences.instagram)
                         host.setFeedFirewallSettings(SocialProvider.THREADS, preferences.threads)
+                        host.setLearningFocusSettings(preferences.learning)
                         host.showProvider(provider)
                     }
                 },
@@ -135,6 +146,7 @@ fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
                     host.setMutedUsernames(mutedUsers)
                     host.setFeedFirewallSettings(SocialProvider.INSTAGRAM, preferences.instagram)
                     host.setFeedFirewallSettings(SocialProvider.THREADS, preferences.threads)
+                    host.setLearningFocusSettings(preferences.learning)
                     host.showProvider(provider)
                 },
                 modifier = Modifier.fillMaxSize()
@@ -242,6 +254,15 @@ fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
             preferences = preferences,
             onPreferencesChange = { preferences = it },
             onClose = { showControls = false }
+        )
+    }
+    if (showSessionReminder) {
+        AlertDialog(
+            onDismissRequest = { showSessionReminder = false },
+            title = { Text("Your session reminder") },
+            text = { Text("You set a ${preferences.focus.sessionLimitMinutes}-minute reminder. Take a moment to decide whether you want to continue.") },
+            confirmButton = { TextButton(onClick = { showSessionReminder = false }) { Text("Continue") } },
+            dismissButton = { TextButton(onClick = { showSessionReminder = false }) { Text("Close reminder") } }
         )
     }
 
