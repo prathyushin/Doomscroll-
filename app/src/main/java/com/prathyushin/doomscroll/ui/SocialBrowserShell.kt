@@ -63,7 +63,7 @@ fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
     val preferencesStore = remember { DoomScrollPreferencesStore(context) }
     var preferences by remember { mutableStateOf(preferencesStore.load()) }
     var provider by remember { mutableStateOf(SocialProvider.INSTAGRAM) }
-    var mutedUsers by remember { mutableStateOf(emptySet<String>()) }
+    var mutedUsers by remember { mutableStateOf(preferences.mutedStories) }
     var selectedStoryUser by remember { mutableStateOf<String?>(null) }
     var showAbout by remember { mutableStateOf(false) }
     var showControls by remember { mutableStateOf(false) }
@@ -293,6 +293,7 @@ fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
             confirmButton = {
                 TextButton(onClick = {
                     mutedUsers = if (isMuted) mutedUsers - username else mutedUsers + username
+                    preferences = preferences.copy(mutedStories = mutedUsers)
                     browserHost?.setMutedUsernames(mutedUsers)
                     selectedStoryUser = null
                 }) { Text(if (isMuted) "Unmute" else "Mute") }
