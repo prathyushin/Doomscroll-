@@ -12,7 +12,8 @@ data class DoomScrollPreferences(
     val learning: LearningFocusSettings = LearningFocusSettings(),
     val comfort: ComfortSettings = ComfortSettings(),
     val notifications: NotificationPreferences = NotificationPreferences(),
-    val privacy: PrivacyPreferences = PrivacyPreferences()
+    val privacy: PrivacyPreferences = PrivacyPreferences(),
+    val mutedStories: Set<String> = emptySet()
 )
 
 class DoomScrollPreferencesStore(context: Context) {
@@ -28,7 +29,9 @@ class DoomScrollPreferencesStore(context: Context) {
             learning = root.optJSONObject("learning").toLearningSettings(),
             comfort = root.optJSONObject("comfort").toComfortSettings(),
             notifications = root.optJSONObject("notifications").toNotificationSettings(),
-            privacy = root.optJSONObject("privacy").toPrivacySettings()
+            privacy = root.optJSONObject("privacy").toPrivacySettings(),
+            mutedStories = root.optStringSet("mutedStories").map { it.trim().removePrefix("@").lowercase() }
+                .filter { it.matches(Regex("[a-z0-9._]{1,30}")) }.toSet()
         )
     }
 
@@ -42,6 +45,7 @@ class DoomScrollPreferencesStore(context: Context) {
             .put("comfort", value.comfort.toJson())
             .put("notifications", value.notifications.toJson())
             .put("privacy", value.privacy.toJson())
+            .put("mutedStories", JSONArray(value.mutedStories.toList()))
         prefs.edit().putString(KEY, root.toString()).apply()
     }
 
