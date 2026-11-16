@@ -9,26 +9,24 @@ class FeedProfileTest {
     @Test
     fun normalModeLeavesFeedControlsDisabled() {
         val settings = FeedProfile.NORMAL.defaults
-
         assertFalse(settings.hideRecommendations)
         assertFalse(settings.hideSuggestedAccounts)
-        assertFalse(settings.hideReels)
+        assertFalse(settings.hideReelsEntryPoints)
     }
 
     @Test
-    fun cleanAndFocusModesEnableAllOptionalFeedRestrictions() {
+    fun cleanAndFocusModesEnableOptionalFeedRestrictions() {
         listOf(FeedProfile.CLEAN_FEED, FeedProfile.FOCUS_MODE).forEach { profile ->
             assertTrue(profile.defaults.hideRecommendations)
             assertTrue(profile.defaults.hideSuggestedAccounts)
-            assertTrue(profile.defaults.hideReels)
+            assertTrue(profile.defaults.hideReelsEntryPoints)
         }
     }
 
     @Test
-    fun photoModeHidesReelsWithoutHidingRecommendationsByDefault() {
+    fun photoModeOnlyHidesReelsEntryPoints() {
         val settings = FeedProfile.PHOTO_MODE.defaults
-
-        assertTrue(settings.hideReels)
+        assertTrue(settings.hideReelsEntryPoints)
         assertFalse(settings.hideRecommendations)
         assertFalse(settings.hideSuggestedAccounts)
     }
@@ -38,7 +36,27 @@ class FeedProfileTest {
         val settings = FeedFirewallSettings(
             hiddenAccounts = setOf(" @Example.User ", "valid_name", "invalid name", "")
         ).normalized()
-
         assertEquals(setOf("example.user", "valid_name"), settings.hiddenAccounts)
+    }
+
+    @Test
+    fun learningTopicsAreNormalizedAndInvalidEntriesRemoved() {
+        val settings = LearningFocusSettings(
+            enabled = true,
+            topics = setOf("  Kotlin  ", "Android Development", "x", "bad/topic")
+        ).normalized()
+        assertEquals(setOf("kotlin", "android development"), settings.topics)
+    }
+
+    @Test
+    fun focusSessionLimitIsBoundedAndCheckpointsDefaultOff() {
+        assertEquals(240, FocusSettings(sessionLimitMinutes = 900).normalized().sessionLimitMinutes)
+        assertEquals(0, FocusSettings(sessionLimitMinutes = -10).normalized().sessionLimitMinutes)
+        assertFalse(FocusSettings().scrollCheckpoints)
+    }
+
+    @Test
+    fun privacyAnalyticsDefaultsOff() {
+        assertFalse(PrivacyPreferences().analyticsEnabled)
     }
 }
