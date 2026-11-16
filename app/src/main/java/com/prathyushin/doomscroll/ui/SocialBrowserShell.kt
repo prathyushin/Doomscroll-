@@ -7,6 +7,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -18,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
@@ -36,6 +38,10 @@ import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import com.prathyushin.doomscroll.browser.SocialBrowserHostView
 import com.prathyushin.doomscroll.browser.SocialProvider
+import com.prathyushin.doomscroll.feed.DoomScrollPreferences
+import com.prathyushin.doomscroll.feed.DoomScrollPreferencesStore
+import com.prathyushin.doomscroll.feed.FeedProfile
+import com.prathyushin.doomscroll.feed.FeedFirewallSettings
 import kotlinx.coroutines.delay
 
 private val Black = Color(0xFF000000)
@@ -47,10 +53,14 @@ private val AboutBlue = Color(0xFF3978F6)
 
 @Composable
 fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
+    val context = LocalContext.current
+    val preferencesStore = remember { DoomScrollPreferencesStore(context) }
+    var preferences by remember { mutableStateOf(preferencesStore.load()) }
     var provider by remember { mutableStateOf(SocialProvider.INSTAGRAM) }
     var mutedUsers by remember { mutableStateOf(emptySet<String>()) }
     var selectedStoryUser by remember { mutableStateOf<String?>(null) }
     var showAbout by remember { mutableStateOf(false) }
+    var showControls by remember { mutableStateOf(false) }
     var dockExpanded by remember { mutableStateOf(false) }
     var dockVisible by remember { mutableStateOf(true) }
     var browserHost by remember { mutableStateOf<SocialBrowserHostView?>(null) }
@@ -58,8 +68,14 @@ fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
     var isMediaViewer by remember { mutableStateOf(false) }
     var isFullscreen by remember { mutableStateOf(false) }
 
-    LaunchedEffect(dockExpanded, dockVisible, isMediaViewer, isFullscreen, showAbout) {
-        if (showAbout || isMediaViewer || isFullscreen) {
+    LaunchedEffect(preferences) {
+        preferencesStore.save(preferences)
+        browserHost?.setFeedFirewallSettings(SocialProvider.INSTAGRAM, preferences.instagram)
+        browserHost?.setFeedFirewallSettings(SocialProvider.THREADS, preferences.threads)
+    }
+
+    LaunchedEffect(dockExpanded, dockVisible, isMediaViewer, isFullscreen, showAbout, showControls) {
+        if (showAbout || showControls || isMediaViewer || isFullscreen) {
             dockExpanded = false
             dockVisible = false
         } else if (dockExpanded) {
@@ -73,9 +89,10 @@ fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
         }
     }
 
-    BackHandler(enabled = showAbout || isFullscreen || canGoBack) {
+    BackHandler(enabled = showAbout || showControls || isFullscreen || canGoBack) {
         when {
             showAbout -> showAbout = false
+            showControls -> showControls = false
             isFullscreen -> browserHost?.exitFullscreen()
             else -> browserHost?.goBack()
         }
@@ -103,6 +120,8 @@ fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
                         host.setOnFullscreenChanged { isFullscreen = it }
                         onBrowserHostReady(host)
                         host.setMutedUsernames(mutedUsers)
+                        host.setFeedFirewallSettings(SocialProvider.INSTAGRAM, preferences.instagram)
+                        host.setFeedFirewallSettings(SocialProvider.THREADS, preferences.threads)
                         host.showProvider(provider)
                     }
                 },
@@ -113,6 +132,8 @@ fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
                     host.setOnMediaViewerChanged { isMediaViewer = it }
                     host.setOnFullscreenChanged { isFullscreen = it }
                     host.setMutedUsernames(mutedUsers)
+                    host.setFeedFirewallSettings(SocialProvider.INSTAGRAM, preferences.instagram)
+                    host.setFeedFirewallSettings(SocialProvider.THREADS, preferences.threads)
                     host.showProvider(provider)
                 },
                 modifier = Modifier.fillMaxSize()
@@ -126,7 +147,7 @@ fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
                     .height(14.dp)
                     .pointerInput(isMediaViewer, isFullscreen, showAbout) {
                         detectTapGestures {
-                            if (!isMediaViewer && !isFullscreen && !showAbout) {
+                            if (!isMediaViewer && !isFullscreen && !showAbout && !showControls) {
                                 dockVisible = true
                                 dockExpanded = true
                             }
@@ -136,7 +157,7 @@ fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
 
             // Translucent floating glass dock; it disappears after inactivity.
             AnimatedVisibility(
-                visible = dockVisible && !isMediaViewer && !isFullscreen && !showAbout,
+                visible = dockVisible && !isMediaViewer && !isFullscreen && !showAbout && !showControls,
                 modifier = Modifier.align(Alignment.BottomCenter),
                 enter = fadeIn() + slideInVertically { it / 2 },
                 exit = fadeOut() + slideOutVertically { it / 2 }
@@ -171,6 +192,13 @@ fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
                                 dockExpanded = false
                                 dockVisible = false
                             }
+                            TextButton(
+                                onClick = {
+                                    showControls = true
+                                    dockExpanded = false
+                                },
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp)
+                            ) { Text("Controls", color = TextWhite.copy(alpha = 0.82f), style = MaterialTheme.typography.labelMedium) }
                             TextButton(
                                 onClick = {
                                     showAbout = true
@@ -208,6 +236,13 @@ fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
     if (showAbout) {
         DoomScrollAboutPage(onClose = { showAbout = false })
     }
+    if (showControls) {
+        DoomScrollControlsPage(
+            preferences = preferences,
+            onPreferencesChange = { preferences = it },
+            onClose = { showControls = false }
+        )
+    }
 
     selectedStoryUser?.let { username ->
         val isMuted = username in mutedUsers
@@ -231,6 +266,141 @@ fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
                 TextButton(onClick = { selectedStoryUser = null }) { Text("Cancel") }
             }
         )
+    }
+}
+
+
+@Composable
+private fun DoomScrollControlsPage(
+    preferences: DoomScrollPreferences,
+    onPreferencesChange: (DoomScrollPreferences) -> Unit,
+    onClose: () -> Unit
+) {
+    var platform by remember { mutableStateOf(SocialProvider.INSTAGRAM) }
+    var accountDraft by remember { mutableStateOf("") }
+    val settings = if (platform == SocialProvider.INSTAGRAM) preferences.instagram else preferences.threads
+    fun updateSettings(next: FeedFirewallSettings) {
+        onPreferencesChange(
+            if (platform == SocialProvider.INSTAGRAM) preferences.copy(instagram = next.normalized())
+            else preferences.copy(threads = next.normalized())
+        )
+    }
+    Dialog(
+        onDismissRequest = onClose,
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+    ) {
+        Column(
+            Modifier.fillMaxWidth().fillMaxHeight(0.92f).padding(12.dp)
+                .clip(RoundedCornerShape(30.dp)).background(Color(0xFF101216))
+                .border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(30.dp))
+                .verticalScroll(rememberScrollState()).padding(22.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Your Controls", color = TextWhite, fontSize = 25.sp, fontWeight = FontWeight.SemiBold)
+                    Text("Local preferences for your social feeds", color = TextWhite.copy(alpha = 0.6f), fontSize = 12.sp)
+                }
+                IconTextButton("×", onClose)
+            }
+            Text("FEED PROFILE", color = Color(0xFF9AB8F8), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            FeedProfile.values().forEach { profile ->
+                Row(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
+                        .background(if (preferences.profile == profile) Color(0xFF253A60) else Color(0xFF1B1E24))
+                        .clickable {
+                            onPreferencesChange(preferences.copy(
+                                profile = profile,
+                                instagram = profile.defaults,
+                                threads = profile.defaults
+                            ))
+                        }.padding(13.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(profile.title, color = TextWhite, fontWeight = FontWeight.SemiBold)
+                        Text(profile.description, color = TextWhite.copy(alpha = 0.58f), fontSize = 11.sp)
+                    }
+                    RadioButton(selected = preferences.profile == profile, onClick = {
+                        onPreferencesChange(preferences.copy(profile = profile, instagram = profile.defaults, threads = profile.defaults))
+                    })
+                }
+            }
+            Divider(color = Color.White.copy(alpha = 0.12f))
+            Text("FEED FIREWALL", color = Color(0xFF9AB8F8), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(SocialProvider.INSTAGRAM, SocialProvider.THREADS).forEach { item ->
+                    FilterChip(
+                        selected = platform == item,
+                        onClick = { platform = item },
+                        label = { Text(if (item == SocialProvider.INSTAGRAM) "Instagram" else "Threads") }
+                    )
+                }
+            }
+            FirewallSwitch("Hide recommendation modules", settings.hideRecommendations) {
+                updateSettings(settings.copy(hideRecommendations = it))
+            }
+            FirewallSwitch("Hide suggested accounts", settings.hideSuggestedAccounts) {
+                updateSettings(settings.copy(hideSuggestedAccounts = it))
+            }
+            FirewallSwitch("Hide Reels navigation entry points", settings.hideReelsEntryPoints) {
+                updateSettings(settings.copy(hideReelsEntryPoints = it))
+            }
+            Text("HIDDEN ACCOUNTS", color = TextWhite, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = accountDraft,
+                    onValueChange = { accountDraft = it.take(31) },
+                    modifier = Modifier.weight(1f),
+                    singleLine = true,
+                    placeholder = { Text("@username") }
+                )
+                Button(onClick = {
+                    val normalized = (settings.hiddenAccounts + accountDraft).let {
+                        FeedFirewallSettings(hiddenAccounts = it).normalized().hiddenAccounts
+                    }
+                    updateSettings(settings.copy(hiddenAccounts = normalized))
+                    accountDraft = ""
+                }, enabled = accountDraft.isNotBlank()) { Text("Add") }
+            }
+            settings.hiddenAccounts.sorted().forEach { account ->
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text("@$account", color = TextWhite, modifier = Modifier.weight(1f))
+                    TextButton(onClick = { updateSettings(settings.copy(hiddenAccounts = settings.hiddenAccounts - account)) }) { Text("Remove") }
+                }
+            }
+            Divider(color = Color.White.copy(alpha = 0.12f))
+            Text("FOCUS & COMFORT", color = Color(0xFF9AB8F8), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            FirewallSwitch("Optional Reels speed bump (preference)", preferences.focus.reelsSpeedBump) {
+                onPreferencesChange(preferences.copy(focus = preferences.focus.copy(reelsSpeedBump = it)))
+            }
+            FirewallSwitch("Scroll checkpoints (off by default)", preferences.focus.scrollCheckpoints) {
+                onPreferencesChange(preferences.copy(focus = preferences.focus.copy(scrollCheckpoints = it)))
+            }
+            FirewallSwitch("Reduced motion preference", preferences.comfort.reducedMotion) {
+                onPreferencesChange(preferences.copy(comfort = preferences.comfort.copy(reducedMotion = it)))
+            }
+            FirewallSwitch("Larger text preference", preferences.comfort.largerText) {
+                onPreferencesChange(preferences.copy(comfort = preferences.comfort.copy(largerText = it)))
+            }
+            FirewallSwitch("High contrast preference", preferences.comfort.highContrast) {
+                onPreferencesChange(preferences.copy(comfort = preferences.comfort.copy(highContrast = it)))
+            }
+            Divider(color = Color.White.copy(alpha = 0.12f))
+            Text("PRIVACY", color = Color(0xFF9AB8F8), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            Text("Feed preferences are stored on this device. Doom Scroll does not collect analytics. Ad filtering and native notification filtering are not active in this build.", color = TextWhite.copy(alpha = 0.62f), fontSize = 12.sp, lineHeight = 17.sp)
+            Button(onClick = onClose, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(26.dp)) {
+                Text("Done")
+            }
+        }
+    }
+}
+
+@Composable
+private fun FirewallSwitch(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, color = TextWhite, fontSize = 13.sp, modifier = Modifier.weight(1f))
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
 
