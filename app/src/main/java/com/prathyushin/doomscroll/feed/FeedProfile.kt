@@ -1,8 +1,8 @@
 package com.prathyushin.doomscroll.feed
 
 /**
- * User-facing feed modes are presets, not separate browsing destinations.
- * A selected preset can be overridden by the user's per-platform settings.
+ * Feed presets are lightweight preferences, not separate destinations.
+ * Platform-specific overrides remain independent.
  */
 enum class FeedProfile(
     val title: String,
@@ -10,65 +10,87 @@ enum class FeedProfile(
     val defaults: FeedFirewallSettings
 ) {
     FRIENDS_FIRST(
-        title = "Friends First",
-        description = "Prioritise followed accounts and suppress clearly labelled recommendations.",
-        defaults = FeedFirewallSettings(
-            hideRecommendations = true,
-            hideSuggestedAccounts = true,
-            hideReels = false
-        )
+        "Friends First",
+        "Reduce suggested content and prioritise followed accounts.",
+        FeedFirewallSettings(hideRecommendations = true, hideSuggestedAccounts = true)
     ),
     CLEAN_FEED(
-        title = "Clean Feed",
-        description = "Reduce recommendation modules and Reels entry points.",
-        defaults = FeedFirewallSettings(
-            hideRecommendations = true,
-            hideSuggestedAccounts = true,
-            hideReels = true
-        )
+        "Clean Feed",
+        "Reduce recommendation modules and short-video navigation.",
+        FeedFirewallSettings(hideRecommendations = true, hideSuggestedAccounts = true, hideReelsEntryPoints = true)
     ),
     PHOTO_MODE(
-        title = "Photo Mode",
-        description = "Reduce short-video destinations while keeping ordinary posts available.",
-        defaults = FeedFirewallSettings(
-            hideRecommendations = false,
-            hideSuggestedAccounts = false,
-            hideReels = true
-        )
+        "Photo Mode",
+        "Reduce short-video destinations while keeping ordinary posts.",
+        FeedFirewallSettings(hideReelsEntryPoints = true)
     ),
     FOCUS_MODE(
-        title = "Focus Mode",
-        description = "Use the strongest optional feed restrictions.",
-        defaults = FeedFirewallSettings(
-            hideRecommendations = true,
-            hideSuggestedAccounts = true,
-            hideReels = true
-        )
+        "Focus Mode",
+        "Apply your strongest optional feed restrictions.",
+        FeedFirewallSettings(hideRecommendations = true, hideSuggestedAccounts = true, hideReelsEntryPoints = true)
     ),
     NORMAL(
-        title = "Normal Mode",
-        description = "Use the platform's normal browsing experience.",
-        defaults = FeedFirewallSettings()
+        "Normal Mode",
+        "Use the platform's normal browsing experience.",
+        FeedFirewallSettings()
     )
 }
 
 /**
- * Local, deterministic preferences for the Feed Firewall.
- *
- * These values describe desired local UI filtering only. They cannot change
- * server-side recommendation ranking or guarantee that platform content is
- * removed when the website does not expose a stable, identifiable UI element.
+ * Local, best-effort controls for visible web UI elements only.
+ * These settings cannot change server-side ranking or guarantee removal
+ * when a platform changes its markup.
  */
 data class FeedFirewallSettings(
     val hideRecommendations: Boolean = false,
     val hideSuggestedAccounts: Boolean = false,
-    val hideReels: Boolean = false,
+    val hideReelsEntryPoints: Boolean = false,
     val hiddenAccounts: Set<String> = emptySet()
 ) {
     fun normalized(): FeedFirewallSettings = copy(
-        hiddenAccounts = hiddenAccounts
-            .map { it.trim().removePrefix("@").lowercase() }
-            .filter { it.matches(Regex("[a-z0-9._]{1,30}")) }
+        hiddenAccounts = hiddenAccounts.map { it.trim().removePrefix("@").lowercase() }
+            .filter { it.matches(Regex("[a-z0-9._]{1,30}")) }.toSet()
+    )
+}
+
+enum class LearningFocusMode { TOPIC_FILTER, TOPIC_SESSION }
+
+data class LearningFocusSettings(
+    val enabled: Boolean = false,
+    val topics: Set<String> = emptySet(),
+    val mode: LearningFocusMode = LearningFocusMode.TOPIC_FILTER
+) {
+    fun normalized(): LearningFocusSettings = copy(
+        topics = topics.map { it.trim().lowercase() }
+            .filter { it.length in 2..40 && it.matches(Regex("[a-z0-9 #+.-]+")) }
             .toSet()
     )
 }
+
+data class FocusSettings(
+    val sessionLimitMinutes: Int = 0,
+    val quietHoursEnabled: Boolean = false,
+    val quietHoursStart: String = "22:00",
+    val quietHoursEnd: String = "07:00",
+    val reelsSpeedBump: Boolean = false,
+    val scrollCheckpoints: Boolean = false
+) {
+    fun normalized(): FocusSettings = copy(sessionLimitMinutes = sessionLimitMinutes.coerceIn(0, 240))
+}
+
+data class ComfortSettings(
+    val reducedMotion: Boolean = false,
+    val largerText: Boolean = false,
+    val highContrast: Boolean = false,
+    val oneHandedDock: Boolean = false
+)
+
+data class NotificationPreferences(
+    val importantOnly: Boolean = false,
+    val quietHoursEnabled: Boolean = false
+)
+
+data class PrivacyPreferences(
+    val analyticsEnabled: Boolean = false,
+    val adFilteringEnabled: Boolean = false
+)
