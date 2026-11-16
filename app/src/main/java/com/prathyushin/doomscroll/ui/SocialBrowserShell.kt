@@ -2,6 +2,8 @@ package com.prathyushin.doomscroll.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -20,6 +22,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
@@ -120,6 +123,11 @@ fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
             onBackground = TextWhite
         )
     ) {
+        CompositionLocalProvider(
+            LocalDensity provides LocalDensity.current.copy(
+                fontScale = if (preferences.comfort.largerText) 1.15f else LocalDensity.current.fontScale
+            )
+        ) {
         Box(Modifier.fillMaxSize().background(Black).windowInsetsPadding(WindowInsets.systemBars)) {
             AndroidView(
                 factory = { viewContext ->
@@ -172,8 +180,8 @@ fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
             AnimatedVisibility(
                 visible = dockVisible && !isMediaViewer && !isFullscreen && !showAbout && !showControls,
                 modifier = Modifier.align(Alignment.BottomCenter),
-                enter = fadeIn() + slideInVertically { it / 2 },
-                exit = fadeOut() + slideOutVertically { it / 2 }
+                enter = if (preferences.comfort.reducedMotion) EnterTransition.None else fadeIn() + slideInVertically { it / 2 },
+                exit = if (preferences.comfort.reducedMotion) ExitTransition.None else fadeOut() + slideOutVertically { it / 2 }
             ) {
                 Row(
                     modifier = Modifier
@@ -243,6 +251,7 @@ fun DoomScrollApp(onBrowserHostReady: (SocialBrowserHostView) -> Unit) {
                     }
                 }
             }
+        }
         }
     }
 
@@ -440,9 +449,6 @@ private fun DoomScrollControlsPage(
             }
             FirewallSwitch("Larger text preference", preferences.comfort.largerText) {
                 onPreferencesChange(preferences.copy(comfort = preferences.comfort.copy(largerText = it)))
-            }
-            FirewallSwitch("High contrast preference", preferences.comfort.highContrast) {
-                onPreferencesChange(preferences.copy(comfort = preferences.comfort.copy(highContrast = it)))
             }
             Divider(color = Color.White.copy(alpha = 0.12f))
             Text("PRIVACY", color = Color(0xFF9AB8F8), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
