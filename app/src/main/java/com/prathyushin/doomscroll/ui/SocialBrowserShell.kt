@@ -575,16 +575,23 @@ private fun DoomScrollAboutPage(onClose: () -> Unit) {
                     AboutDivider()
                     AboutFeatureRow(
                         title = "Feed Firewall",
-                        description = "More control over recommendations, accounts and content categories.",
-                        status = "IN DEVELOPMENT",
-                        available = false
+                        description = "Local, best-effort controls for visible recommendations, accounts and navigation.",
+                        status = "BETA • WEBSITE-DEPENDENT",
+                        available = true
                     )
                     AboutDivider()
                     AboutFeatureRow(
                         title = "Personal Feed Profiles",
-                        description = "Choose how you want your feed to feel, whenever you want.",
-                        status = "IN DEVELOPMENT",
-                        available = false
+                        description = "Switch between five optional presets from the Controls surface.",
+                        status = "BETA • DEVICE TESTING",
+                        available = true
+                    )
+                    AboutDivider()
+                    AboutFeatureRow(
+                        title = "Learning Focus",
+                        description = "Optional topic matching on visible post cards. Simple text rules, not AI.",
+                        status = "EXPERIMENTAL",
+                        available = true
                     )
                 }
 
