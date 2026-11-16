@@ -518,6 +518,12 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
               }
 
               function hideSuggestedPosts() {
+                document.querySelectorAll('[data-doom-scroll-suggested-hidden="1"]').forEach(function(node) {
+                  if (!c.hideSuggestedAccounts) {
+                    node.style.removeProperty('display');
+                    delete node.dataset.doomScrollSuggestedHidden;
+                  }
+                });
                 document.querySelectorAll('article,[role="article"]').forEach(function(article) {
                   const text = (article.innerText || '').toLowerCase();
                   if (text.includes('suggested for you') || text.includes('suggested posts') ||
@@ -529,14 +535,12 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
 
               function installFeedCleanup() {
                 selectFollowingFeed();
-                hideSuggestedPosts();
                 if (!window.__doomScrollFeedCleanupObserver) {
                   let timer = null;
                   window.__doomScrollFeedCleanupObserver = new MutationObserver(function() {
                     if (timer) clearTimeout(timer);
                     timer = setTimeout(function() {
                       selectFollowingFeed();
-                      hideSuggestedPosts();
                     }, 300);
                   });
                   window.__doomScrollFeedCleanupObserver.observe(document.documentElement, {
@@ -863,7 +867,6 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
               }
               hideForYouTab();
               selectFollowingTab();
-              hideSuggestedThreads();
               if (!window.__doomScrollThreadsObserver) {
                 let timer = null;
                 window.__doomScrollThreadsObserver = new MutationObserver(function() {
@@ -871,7 +874,6 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
                   timer = setTimeout(function() {
                     hideForYouTab();
                     selectFollowingTab();
-                    hideSuggestedThreads();
                   }, 350);
                 });
                 window.__doomScrollThreadsObserver.observe(document.documentElement, {
