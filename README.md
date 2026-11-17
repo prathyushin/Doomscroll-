@@ -6,7 +6,7 @@ Doom Scroll is an independent Android app that brings the official Instagram and
 
 The project explores a simple idea: make the social services you choose easier to access, while making selected algorithm-driven destinations less prominent. It does not replace Instagram or Threads, and it cannot control every recommendation or feature served by Meta.
 
-> **Project status (15 November 2026):** The latest published public device-testing release is **v1.2.0**. Version **v1.2.1** is under development in [pull request #7](https://github.com/prathyushin/Doomscroll-/pull/7). The v1.2.1 changes described below are the intended candidate scope, not a claim that v1.2.1 has already been released or verified on a physical device.
+> **Project status (17 November 2026):** **v2.0.0 Beta 1** is available as a public GitHub pre-release. It is a debug-signed testing build, not a production release. The `v2.0.0-stability` branch is under active hardening; Scroll Pause and the updated launcher mark are being added, and physical-device validation is still required. Do not treat the beta as the finished roadmap.
 
 ## Contents
 
