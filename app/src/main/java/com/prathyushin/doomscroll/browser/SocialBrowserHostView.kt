@@ -28,8 +28,8 @@ enum class SocialProvider(val startUrl: String) {
  */
 class SocialBrowserHostView(context: Context) : FrameLayout(context) {
     private val cookieManager = CookieManager.getInstance()
-    private val instagramView = createWebView(SocialProvider.INSTAGRAM)
-    private val threadsView = createWebView(SocialProvider.THREADS)
+    private var instagramView = createWebView(SocialProvider.INSTAGRAM)
+    private var threadsView = createWebView(SocialProvider.THREADS)
     private var activeProvider = SocialProvider.INSTAGRAM
     private var mutedUsernames: Set<String> = emptySet()
     private var learningSettings = LearningFocusSettings()
@@ -383,7 +383,39 @@ class SocialBrowserHostView(context: Context) : FrameLayout(context) {
                 super.doUpdateVisitedHistory(view, url, isReload)
                 if (view === currentView()) notifyBackState()
             }
+
+            override fun onRenderProcessGone(
+                view: WebView,
+                detail: android.webkit.RenderProcessGoneDetail
+            ): Boolean {
+                recoverWebView(provider, view)
+                return true
+            }
         }
+
+    /**
+     * Android may terminate a WebView renderer under memory pressure.
+     * Replace the affected view instead of allowing the host activity to crash.
+     */
+    private fun recoverWebView(provider: SocialProvider, failedView: WebView) {
+        if (destroyed) return
+        val wasActive = activeProvider == provider
+        val index = if (provider == SocialProvider.INSTAGRAM) 0 else 1
+        (failedView.parent as? FrameLayout)?.removeView(failedView)
+        runCatching { failedView.stopLoading() }
+        runCatching { failedView.destroy() }
+
+        val replacement = createWebView(provider).apply {
+            visibility = if (wasActive) View.VISIBLE else View.GONE
+        }
+        if (provider == SocialProvider.INSTAGRAM) instagramView = replacement else threadsView = replacement
+        addView(replacement, index.coerceAtMost(childCount), LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+        if (wasActive) {
+            replacement.loadUrl(provider.startUrl)
+            replacement.onResume()
+        }
+        notifyBackState()
+    }
 
     private fun handleNavigation(view: WebView, uri: Uri, provider: SocialProvider): Boolean {
         val host = uri.host?.lowercase().orEmpty()
