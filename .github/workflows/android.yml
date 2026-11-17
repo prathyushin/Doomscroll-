@@ -76,7 +76,7 @@ jobs:
         with:
           name: DoomScroll-v2.0.0-beta.2-build
           path: |
-            DoomScroll-v2.0.0-debug-installable.apk
+            DoomScroll-v2.0.0-beta.2-debug-installable.apk
             app/build/outputs/apk/release/app-release*.apk
             app/build/outputs/bundle/release/app-release.aab
           if-no-files-found: error
