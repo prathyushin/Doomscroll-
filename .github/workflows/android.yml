@@ -71,6 +71,9 @@ jobs:
       - name: Name installable debug APK
         run: cp app/build/outputs/apk/debug/app-debug.apk DoomScroll-v2.0.0-beta.2-debug-installable.apk
 
+      - name: Verify installable debug APK exists
+        run: test -s DoomScroll-v2.0.0-beta.2-debug-installable.apk
+
       - name: Upload installable and release artifacts
         uses: actions/upload-artifact@v4
         with:
