@@ -63,7 +63,7 @@ class DoomScrollAccessibilityService : AccessibilityService() {
         recentScrollEvents.addLast(now)
 
         val cooldownMs = focus.pauseCooldownMinutes * 60_000L
-        if (overlay != null || now - lastInterventionAt < cooldownMs) return
+        if (overlay != null || (lastInterventionAt != 0L && now - lastInterventionAt < cooldownMs)) return
 
         if (recentScrollEvents.size >= focus.scrollBurstThreshold) {
             lastInterventionAt = now
