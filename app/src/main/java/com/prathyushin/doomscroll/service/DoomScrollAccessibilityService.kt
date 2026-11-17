@@ -14,7 +14,7 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.prathyushin.doomscroll.feed.DoomScrollPreferencesStore
-import java.util.ArrayDeque
+import com.prathyushin.doomscroll.feed.ScrollBurstDetector
 
 /**
  * Optional, local-only scroll speed bump.
@@ -24,7 +24,8 @@ import java.util.ArrayDeque
  * are ignored and are not stored.
  */
 class DoomScrollAccessibilityService : AccessibilityService() {
-    private val recentScrollEvents = ArrayDeque<Long>()
+    private var burstDetector = ScrollBurstDetector()
+    private var detectorThreshold = 12
     private var appIsForeground = false
     private var lastInterventionAt = 0L
     private var overlay: View? = null
@@ -37,7 +38,7 @@ class DoomScrollAccessibilityService : AccessibilityService() {
         if (sourcePackage != packageName) {
             if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED && appIsForeground) {
                 appIsForeground = false
-                recentScrollEvents.clear()
+                burstDetector.reset()
                 removeOverlay()
             }
             return
@@ -45,7 +46,7 @@ class DoomScrollAccessibilityService : AccessibilityService() {
 
         if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
             appIsForeground = true
-            recentScrollEvents.clear()
+            burstDetector.reset()
             return
         }
 
@@ -53,21 +54,20 @@ class DoomScrollAccessibilityService : AccessibilityService() {
 
         val focus = runCatching { preferences.load().focus.normalized() }.getOrNull() ?: return
         if (!focus.scrollPauseEnabled) {
-            recentScrollEvents.clear()
+            burstDetector.reset()
             return
         }
 
-        while (recentScrollEvents.isNotEmpty() && now - recentScrollEvents.peekFirst() > WINDOW_MS) {
-            recentScrollEvents.removeFirst()
+        if (detectorThreshold != focus.scrollBurstThreshold) {
+            detectorThreshold = focus.scrollBurstThreshold
+            burstDetector = ScrollBurstDetector(threshold = detectorThreshold)
         }
-        recentScrollEvents.addLast(now)
-
+        val reachedBurst = burstDetector.record(now)
         val cooldownMs = focus.pauseCooldownMinutes * 60_000L
         if (overlay != null || (lastInterventionAt != 0L && now - lastInterventionAt < cooldownMs)) return
 
-        if (recentScrollEvents.size >= focus.scrollBurstThreshold) {
+        if (reachedBurst) {
             lastInterventionAt = now
-            recentScrollEvents.clear()
             showPauseOverlay()
         }
     }
@@ -115,7 +115,7 @@ class DoomScrollAccessibilityService : AccessibilityService() {
 
         card.addView(actionButton("Continue intentionally", false) {
             removeOverlay()
-            recentScrollEvents.clear()
+            burstDetector.reset()
         }.apply {
             val params = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -181,12 +181,12 @@ class DoomScrollAccessibilityService : AccessibilityService() {
 
     override fun onInterrupt() {
         removeOverlay()
-        recentScrollEvents.clear()
+        burstDetector.reset()
     }
 
     override fun onDestroy() {
         removeOverlay()
-        recentScrollEvents.clear()
+        burstDetector.reset()
         super.onDestroy()
     }
 
