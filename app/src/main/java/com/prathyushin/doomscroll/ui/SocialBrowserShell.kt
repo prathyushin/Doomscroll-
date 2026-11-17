@@ -2,6 +2,8 @@ package com.prathyushin.doomscroll.ui
 
 import androidx.activity.compose.BackHandler
 import android.Manifest
+import android.content.Intent
+import android.provider.Settings
 import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
 import androidx.compose.animation.AnimatedVisibility
@@ -441,6 +443,45 @@ private fun DoomScrollControlsPage(
             Slider(value = preferences.focus.sessionLimitMinutes.toFloat(), onValueChange = { value ->
                 onPreferencesChange(preferences.copy(focus = preferences.focus.copy(sessionLimitMinutes = value.toInt())))
             }, valueRange = 0f..240f, steps = 15)
+            Divider(color = Color.White.copy(alpha = 0.12f))
+            Text("SCROLL PAUSE", color = Color(0xFF9AB8F8), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            FirewallSwitch("Offer a pause after rapid scrolling", preferences.focus.scrollPauseEnabled) {
+                onPreferencesChange(preferences.copy(focus = preferences.focus.copy(scrollPauseEnabled = it)))
+            }
+            Text(
+                "Optional on-device speed bump. When enabled, Doom Scroll counts scroll events only while this app is open. It does not read screen text, messages or web content.",
+                color = TextWhite.copy(alpha = 0.62f), fontSize = 11.sp, lineHeight = 15.sp
+            )
+            Text("Trigger after ${preferences.focus.scrollBurstThreshold} scroll events within 5 seconds", color = TextWhite, fontSize = 12.sp)
+            Slider(
+                value = preferences.focus.scrollBurstThreshold.toFloat(),
+                onValueChange = { value ->
+                    onPreferencesChange(preferences.copy(focus = preferences.focus.copy(scrollBurstThreshold = value.toInt())))
+                },
+                valueRange = 6f..30f,
+                steps = 23,
+                enabled = preferences.focus.scrollPauseEnabled
+            )
+            Text("Pause cooldown: ${preferences.focus.pauseCooldownMinutes} minutes", color = TextWhite, fontSize = 12.sp)
+            Slider(
+                value = preferences.focus.pauseCooldownMinutes.toFloat(),
+                onValueChange = { value ->
+                    onPreferencesChange(preferences.copy(focus = preferences.focus.copy(pauseCooldownMinutes = value.toInt())))
+                },
+                valueRange = 5f..60f,
+                steps = 10,
+                enabled = preferences.focus.scrollPauseEnabled
+            )
+            OutlinedButton(
+                onClick = { context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Open Android Accessibility settings")
+            }
+            Text(
+                "To activate this protection, enable Doom Scroll in Android Accessibility settings. You can turn it off here or in Android settings at any time.",
+                color = TextWhite.copy(alpha = 0.55f), fontSize = 11.sp, lineHeight = 15.sp
+            )
             FirewallSwitch("Reduced motion preference", preferences.comfort.reducedMotion) {
                 onPreferencesChange(preferences.copy(comfort = preferences.comfort.copy(reducedMotion = it)))
             }
