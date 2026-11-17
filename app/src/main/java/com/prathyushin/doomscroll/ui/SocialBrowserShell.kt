@@ -14,6 +14,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
 import androidx.compose.ui.input.pointer.pointerInput
@@ -28,6 +29,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
+import com.prathyushin.doomscroll.R
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
@@ -559,7 +562,11 @@ private fun DoomScrollAboutPage(onClose: () -> Unit) {
                                 .border(1.dp, Color.White.copy(alpha = 0.2f), RoundedCornerShape(11.dp)),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text("D", color = TextWhite, fontWeight = FontWeight.Bold, fontSize = 19.sp)
+                            Image(
+                                painter = painterResource(id = R.drawable.ic_launcher_foreground),
+                                contentDescription = "Doom Scroll logo",
+                                modifier = Modifier.size(30.dp)
+                            )
                         }
                         Text("DOOM SCROLL", color = TextWhite, fontWeight = FontWeight.SemiBold, letterSpacing = 1.2.sp)
                     }
@@ -632,6 +639,13 @@ private fun DoomScrollAboutPage(onClose: () -> Unit) {
                         title = "Learning Focus",
                         description = "Optional topic matching on visible post cards. Simple text rules, not AI.",
                         status = "EXPERIMENTAL",
+                        available = true
+                    )
+                    AboutDivider()
+                    AboutFeatureRow(
+                        title = "Scroll Pause",
+                        description = "An optional on-device pause after rapid scrolling. Requires explicit Android Accessibility permission.",
+                        status = "OPTIONAL • DEVICE PERMISSION",
                         available = true
                     )
                 }
