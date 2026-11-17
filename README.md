@@ -31,6 +31,7 @@ Doom Scroll is designed around these features:
 - **Original website experience:** Stories, Reels, posts, and other supported content are rendered by the official websites rather than recreated by Doom Scroll.
 - **Session-only Story hiding (v1.2.1 candidate):** Long-press a Story tile to hide or restore that account's Story in the current app session. This choice is temporary and is not saved.
 - **Best-effort feed controls:** The app attempts to make selected recommendation-heavy destinations less prominent and to prefer the Following feed where the website exposes a usable control.
+- **Scroll Pause (stability branch, not in Beta 1):** An optional Android accessibility-based speed bump is being added. It counts scroll events only while Doom Scroll is open and does not read screen content.
 - **Fullscreen media:** Supports the WebView fullscreen flow when a website requests it.
 - **Media selection:** Website upload requests can open Android's system picker.
 - **Capture permissions:** Camera or microphone access is requested only when a supported, trusted Instagram or Threads page initiates the corresponding capture request.
@@ -59,15 +60,15 @@ The About dialog displays:
 
 ## Download and install
 
-### Latest published release
+### Latest published beta
 
-The latest published public device-testing build is **Doom Scroll v1.2.0**:
+The latest public pre-release is **Doom Scroll v2.0.0 Beta 1**:
 
-- [Download v1.2.0 APK](https://github.com/prathyushin/Doomscroll-/releases/download/v1.2.0/DoomScroll-v1.2.0.apk)
-- [View v1.2.0 release notes and checksum](https://github.com/prathyushin/Doomscroll-/releases/tag/v1.2.0)
+- [Download v2.0.0 Beta 1 APK](https://github.com/prathyushin/Doomscroll-/releases/download/v2.0.0-beta.1/DoomScroll-v2.0.0-debug-installable.apk)
+- [View v2.0.0 Beta 1 release notes and checksum](https://github.com/prathyushin/Doomscroll-/releases/tag/v2.0.0-beta.1)
 - [Browse all releases](https://github.com/prathyushin/Doomscroll-/releases)
 
-**v1.2.1 is not yet a published release.** Its implementation is being reviewed in [PR #7](https://github.com/prathyushin/Doomscroll-/pull/7). Do not use a v1.2.1 download URL until that release and its APK asset are actually published.
+**Important:** Beta 1 is an early debug-signed build. It does not include the later stability-branch work such as the new launcher mark and optional Scroll Pause. It is not the finished or production-signed app. The `v2.0.0-stability` branch is under CI and physical-device validation.
 
 ### Device requirements
 
