@@ -1,4 +1,4 @@
 <resources>
     <string name="app_name">Doom Scroll</string>
-    <string name="accessibility_description">Doom Scroll monitors selected app sessions locally and can place a pause screen when sustained scrolling or long sessions cross your chosen limits. It does not read message content or collect data remotely.</string>
+    <string name="accessibility_description">Optional Doom Scroll protection. It checks only whether Doom Scroll is in the foreground and counts scroll events locally to offer a pause after rapid scrolling. It does not read screen text, messages, passwords, web content or collect data remotely.</string>
 </resources>
