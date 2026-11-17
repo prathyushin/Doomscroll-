@@ -56,6 +56,21 @@ class FeedProfileTest {
     }
 
     @Test
+    fun scrollPauseDefaultsOffAndBoundsItsControls() {
+        val defaults = FocusSettings()
+        assertFalse(defaults.scrollPauseEnabled)
+        assertEquals(12, defaults.scrollBurstThreshold)
+        assertEquals(20, defaults.pauseCooldownMinutes)
+
+        val bounded = FocusSettings(
+            scrollBurstThreshold = 100,
+            pauseCooldownMinutes = 1
+        ).normalized()
+        assertEquals(30, bounded.scrollBurstThreshold)
+        assertEquals(5, bounded.pauseCooldownMinutes)
+    }
+
+    @Test
     fun privacyAnalyticsDefaultsOff() {
         assertFalse(PrivacyPreferences().analyticsEnabled)
     }
