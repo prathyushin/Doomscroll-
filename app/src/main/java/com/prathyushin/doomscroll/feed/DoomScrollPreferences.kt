@@ -67,7 +67,10 @@ class DoomScrollPreferencesStore(context: Context) {
             quietHoursStart = o.optString("quietHoursStart", "22:00"),
             quietHoursEnd = o.optString("quietHoursEnd", "07:00"),
             reelsSpeedBump = o.optBoolean("reelsSpeedBump"),
-            scrollCheckpoints = o.optBoolean("scrollCheckpoints", false)
+            scrollCheckpoints = o.optBoolean("scrollCheckpoints", false),
+            scrollPauseEnabled = o.optBoolean("scrollPauseEnabled", false),
+            scrollBurstThreshold = o.optInt("scrollBurstThreshold", 12),
+            pauseCooldownMinutes = o.optInt("pauseCooldownMinutes", 20)
         ).normalized()
     }
 
@@ -115,6 +118,9 @@ class DoomScrollPreferencesStore(context: Context) {
         .put("quietHoursEnd", quietHoursEnd)
         .put("reelsSpeedBump", reelsSpeedBump)
         .put("scrollCheckpoints", scrollCheckpoints)
+        .put("scrollPauseEnabled", scrollPauseEnabled)
+        .put("scrollBurstThreshold", scrollBurstThreshold)
+        .put("pauseCooldownMinutes", pauseCooldownMinutes)
 
     private fun LearningFocusSettings.toJson() = JSONObject()
         .put("enabled", enabled).put("topics", JSONArray(topics.toList())).put("mode", mode.name)
