@@ -18,7 +18,7 @@ class ScrollBurstDetector(
     }
 
     fun record(timestampMillis: Long): Boolean {
-        while (timestamps.isNotEmpty() && timestampMillis - timestamps.peekFirst() > windowMillis) {
+        while (timestamps.isNotEmpty() && timestampMillis - timestamps.peekFirst() >= windowMillis) {
             timestamps.removeFirst()
         }
         timestamps.addLast(timestampMillis)
