@@ -190,7 +190,4 @@ class DoomScrollAccessibilityService : AccessibilityService() {
         super.onDestroy()
     }
 
-    private companion object {
-        const val WINDOW_MS = 5_000L
-    }
 }
