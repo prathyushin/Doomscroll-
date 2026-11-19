@@ -73,9 +73,16 @@ data class FocusSettings(
     val quietHoursStart: String = "22:00",
     val quietHoursEnd: String = "07:00",
     val reelsSpeedBump: Boolean = false,
-    val scrollCheckpoints: Boolean = false
+    val scrollCheckpoints: Boolean = false,
+    val scrollPauseEnabled: Boolean = false,
+    val scrollBurstThreshold: Int = 12,
+    val pauseCooldownMinutes: Int = 20
 ) {
-    fun normalized(): FocusSettings = copy(sessionLimitMinutes = sessionLimitMinutes.coerceIn(0, 240))
+    fun normalized(): FocusSettings = copy(
+        sessionLimitMinutes = sessionLimitMinutes.coerceIn(0, 240),
+        scrollBurstThreshold = scrollBurstThreshold.coerceIn(6, 30),
+        pauseCooldownMinutes = pauseCooldownMinutes.coerceIn(5, 60)
+    )
 }
 
 data class ComfortSettings(

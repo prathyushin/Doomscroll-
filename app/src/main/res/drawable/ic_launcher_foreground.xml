@@ -1,3 +1,26 @@
-<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
-    <path android:fillColor="#FFFFF3E6" android:pathData="M28,20 L48,20 C69,20 84,35 84,54 C84,73 69,88 48,88 L28,88 Z M42,34 L42,74 L48,74 C60,74 70,66 70,54 C70,42 60,34 48,34 Z"/>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- A phone frame, a moving scroll trail and a hand: The Endless Scroll mark. -->
+    <path
+        android:fillColor="#FFFFF3E6"
+        android:pathData="M36,13 C29.4,13 24,18.4 24,25 L24,83 C24,89.6 29.4,95 36,95 L72,95 C78.6,95 84,89.6 84,83 L84,25 C84,18.4 78.6,13 72,13 Z" />
+    <path
+        android:fillColor="#FF63313A"
+        android:pathData="M34,25 L74,25 L74,80 L34,80 Z" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFF3E6"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M42,43 C47,35 58,33 66,38 M59,32 L67,38 L58,42" />
+    <path
+        android:fillColor="#FFFFF3E6"
+        android:pathData="M45,75 L45,59 C45,54 51,52 54,57 L56,62 L59,49 C60,45 66,45 66,50 L63,65 L67,59 C70,55 75,58 73,63 L69,74 C67,80 62,83 56,83 L51,83 C47.7,83 45,80.3 45,77 Z" />
+    <path
+        android:fillColor="#FF63313A"
+        android:pathData="M46,87 L62,87 C62,89.2 60.2,91 58,91 L50,91 C47.8,91 46,89.2 46,87 Z" />
 </vector>
