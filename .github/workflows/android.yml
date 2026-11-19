@@ -10,6 +10,8 @@ on:
       - "v1.2.1-privacy-hardening"
       - "v2.0.0-development"
       - "v2.0.0-stability"
+    tags:
+      - "v2.0.0*"
   pull_request:
     branches:
       - "main"
@@ -20,13 +22,14 @@ on:
       - "v2.0.0-stability"
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
     env:
       HAS_SIGNING_KEY: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-    permissions:
-      contents: read
     steps:
       - uses: actions/checkout@v4
 
@@ -45,41 +48,71 @@ jobs:
       - name: Assemble installable debug APK
         run: gradle assembleDebug
 
-      - name: Prepare optional release signing
+      - name: Verify debug APK exists
+        run: test -s app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Prepare production signing key
         if: ${{ env.HAS_SIGNING_KEY != '' }}
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
-          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/doomscroll-upload.jks"
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/doomscroll-release.jks"
+          test -s "$RUNNER_TEMP/doomscroll-release.jks"
 
-      - name: Assemble release APK
+      - name: Assemble production-signed release APK
+        if: ${{ env.HAS_SIGNING_KEY != '' }}
         env:
-          ANDROID_KEYSTORE_PATH: ${{ env.HAS_SIGNING_KEY != '' && format('{0}/doomscroll-upload.jks', runner.temp) || '' }}
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/doomscroll-release.jks
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: gradle assembleRelease
 
-      - name: Build release AAB
+      - name: Build production-signed release AAB
+        if: ${{ env.HAS_SIGNING_KEY != '' }}
         env:
-          ANDROID_KEYSTORE_PATH: ${{ env.HAS_SIGNING_KEY != '' && format('{0}/doomscroll-upload.jks', runner.temp) || '' }}
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/doomscroll-release.jks
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: gradle bundleRelease
 
+      - name: Verify production APK signature
+        if: ${{ env.HAS_SIGNING_KEY != '' }}
+        run: |
+          APK="$(find app/build/outputs/apk/release -maxdepth 1 -name '*.apk' -type f | head -n 1)"
+          test -n "$APK"
+          test -s "$APK"
+          "$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -n 1)/apksigner" verify --verbose --print-certs "$APK"
+
+      - name: Verify production AAB signature
+        if: ${{ env.HAS_SIGNING_KEY != '' }}
+        run: |
+          AAB="$(find app/build/outputs/bundle/release -maxdepth 1 -name '*.aab' -type f | head -n 1)"
+          test -n "$AAB"
+          test -s "$AAB"
+          jarsigner -verify -verbose -certs "$AAB"
+
       - name: Name installable debug APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk DoomScroll-v2.0.0-beta.2-debug-installable.apk
+        run: cp app/build/outputs/apk/debug/app-debug.apk DoomScroll-v2.0.0-debug-unsigned-or-debug-signed.apk
 
-      - name: Verify installable debug APK exists
-        run: test -s DoomScroll-v2.0.0-beta.2-debug-installable.apk
-
-      - name: Upload installable and release artifacts
+      - name: Upload debug testing artifact
         uses: actions/upload-artifact@v4
         with:
-          name: DoomScroll-v2.0.0-beta.2-build
-          path: |
-            DoomScroll-v2.0.0-beta.2-debug-installable.apk
-            app/build/outputs/apk/release/app-release*.apk
-            app/build/outputs/bundle/release/app-release.aab
+          name: DoomScroll-v2.0.0-debug-testing-build
+          path: DoomScroll-v2.0.0-debug-unsigned-or-debug-signed.apk
           if-no-files-found: error
+
+      - name: Upload verified production release artifacts
+        if: ${{ env.HAS_SIGNING_KEY != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: DoomScroll-v2.0.0-production-signed-build
+          path: |
+            app/build/outputs/apk/release/*.apk
+            app/build/outputs/bundle/release/*.aab
+          if-no-files-found: error
+
+      - name: Explain skipped production signing
+        if: ${{ env.HAS_SIGNING_KEY == '' }}
+        run: echo "Production APK/AAB packaging was skipped because Android signing secrets are not configured. Only the debug testing APK is available; do not publish it as a stable release."
