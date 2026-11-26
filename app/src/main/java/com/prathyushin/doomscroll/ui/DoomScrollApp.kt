@@ -7,6 +7,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -23,6 +24,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.prathyushin.doomscroll.data.LocalPolicyStore
 import com.prathyushin.doomscroll.model.AppPolicy
 
@@ -54,7 +56,7 @@ fun DoomScrollApp() {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 DoomEmblem(Modifier.size(58.dp))
                 Column {
-                    Text("DOOM SCROLL", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black, letterSpacing = 1.6f)
+                    Text("DOOM SCROLL", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black, letterSpacing = 1.6.sp)
                     Text("Make the scroll intentional.", color = Muted, style = MaterialTheme.typography.bodyMedium)
                 }
             }
@@ -63,7 +65,7 @@ fun DoomScrollApp() {
                 Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(26.dp)).background(Panel).padding(20.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text("YOUR FOCUS", color = Accent, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, letterSpacing = 1.2f)
+                            Text("YOUR FOCUS", color = Accent, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
                             Spacer(Modifier.height(6.dp))
                             Text("Pause with purpose", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                             Text("Choose when a reminder should appear.", color = Muted, style = MaterialTheme.typography.bodyMedium)
@@ -115,7 +117,7 @@ fun DoomScrollApp() {
                 }
 
                 Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(Panel).padding(18.dp)) {
-                    Text("PRIVACY, BY DESIGN", color = Accent, fontWeight = FontWeight.Bold, letterSpacing = 1f)
+                    Text("PRIVACY, BY DESIGN", color = Accent, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                     Spacer(Modifier.height(8.dp))
                     Text("Your app-selection and reminder settings stay on this device. Doom Scroll does not send behavior data to a server.", color = Muted, style = MaterialTheme.typography.bodyMedium)
                 }
