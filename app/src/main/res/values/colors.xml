@@ -1,6 +1,6 @@
 <resources>
-    <color name="ivory">#FFF3E6</color>
-    <color name="charcoal">#111111</color>
-    <color name="burgundy">#43302E</color>
-    <color name="crimson">#8B1735</color>
+    <color name="zen_charcoal">#101114</color>
+    <color name="zen_panel">#1B1A1F</color>
+    <color name="zen_mint">#B8F2D0</color>
+    <color name="zen_muted">#AAA6B0</color>
 </resources>

@@ -2,6 +2,7 @@ package com.prathyushin.doomscroll.service
 
 import android.accessibilityservice.AccessibilityService
 import android.graphics.PixelFormat
+import android.graphics.drawable.GradientDrawable
 import android.os.SystemClock
 import android.view.Gravity
 import android.view.View
@@ -12,10 +13,12 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import com.prathyushin.doomscroll.data.LocalPolicyStore
 import com.prathyushin.doomscroll.model.BehaviorSnapshot
+import com.prathyushin.doomscroll.policy.FocusScheduleEngine
 import com.prathyushin.doomscroll.policy.PolicyEngine
 
 class DoomAccessibilityService : AccessibilityService() {
     private lateinit var store: LocalPolicyStore
+    private val focusEngine = FocusScheduleEngine()
     private var activePackage: String? = null
     private var sessionStartedAt = 0L
     private var scrollCount = 0
@@ -31,7 +34,7 @@ class DoomAccessibilityService : AccessibilityService() {
 
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
         val packageName = event.packageName?.toString() ?: return
-        if (packageName == packageNameOfService()) return
+        if (packageName == this.packageName) return
         if (!store.isEnabled(packageName)) {
             resetIfNeeded(packageName)
             return
@@ -52,11 +55,16 @@ class DoomAccessibilityService : AccessibilityService() {
             scrollCount++
         }
 
-        if (now - lastInterventionAt < store.cooldownMinutes() * 60_000L) return
+        val focus = focusEngine.evaluate(store.focusSchedules())
+        val effectiveCooldownMin = focus.effectiveCooldownMinutes ?: store.cooldownMinutes()
+        if (now - lastInterventionAt < effectiveCooldownMin * 60_000L) return
 
+        val effectiveLimitMin = focus.effectiveSessionLimitMinutes ?: store.sessionLimitMinutes()
         val sessionSeconds = ((now - sessionStartedAt) / 1000L).coerceAtLeast(0)
         val engine = PolicyEngine(
-            sessionLimitSeconds = store.sessionLimitMinutes() * 60L
+            sessionLimitSeconds = effectiveLimitMin * 60L,
+            scrollThreshold = store.scrollThreshold(),
+            reopenThreshold = store.reopenThreshold()
         )
         val decision = engine.evaluate(
             BehaviorSnapshot(packageName, sessionSeconds, scrollCount, reopenCount)
@@ -81,38 +89,74 @@ class DoomAccessibilityService : AccessibilityService() {
         if (overlay != null) return
         val windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
 
+        val panelBg = GradientDrawable().apply {
+            setColor(0xF01B1A1F.toInt())
+            cornerRadius = 48f
+            setStroke(2, 0x44B8F2D0)
+        }
+
         val panel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(48, 48, 48, 48)
-            setBackgroundColor(0xFFFFF3E6.toInt())
+            setPadding(56, 56, 56, 56)
+            background = panelBg
         }
+
+        panel.addView(TextView(this).apply {
+            text = "ZEN PAUSE"
+            textSize = 12f
+            letterSpacing = 0.14f
+            setTextColor(0xFFB8F2D0.toInt())
+        })
         panel.addView(TextView(this).apply {
             text = "Pause before you continue"
-            textSize = 26f
-            setTextColor(0xFF111111.toInt())
+            textSize = 22f
+            setTextColor(0xFFFFFFFF.toInt())
+            setPadding(0, 12, 0, 8)
         })
         panel.addView(TextView(this).apply {
-            text = "$reason. Take a moment to decide intentionally."
-            textSize = 16f
-            setTextColor(0xFF43302E.toInt())
-            setPadding(0, 20, 0, 28)
+            text = "$reason. Take a quiet breath and decide if you want to keep scrolling."
+            textSize = 15f
+            setTextColor(0xFFAAA6B0.toInt())
+            setPadding(0, 0, 0, 32)
         })
+
+        val primaryBtnBg = GradientDrawable().apply {
+            setColor(0xFFB8F2D0.toInt())
+            cornerRadius = 32f
+        }
         val unlock = Button(this).apply {
             text = "Continue intentionally"
+            background = primaryBtnBg
+            setTextColor(0xFF101114.toInt())
+            isAllCaps = false
             setOnClickListener {
                 removeOverlay()
                 lastInterventionAt = SystemClock.elapsedRealtime()
             }
         }
-        panel.addView(unlock)
+        panel.addView(unlock, LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        ).apply { bottomMargin = 20 })
+
+        val secondaryBtnBg = GradientDrawable().apply {
+            setColor(0xFF25242B.toInt())
+            cornerRadius = 32f
+        }
         val close = Button(this).apply {
             text = "Leave app"
+            background = secondaryBtnBg
+            setTextColor(0xFFFFFFFF.toInt())
+            isAllCaps = false
             setOnClickListener {
                 performGlobalAction(GLOBAL_ACTION_BACK)
                 removeOverlay()
             }
         }
-        panel.addView(close)
+        panel.addView(close, LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        ))
 
         val params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.MATCH_PARENT,
@@ -121,10 +165,15 @@ class DoomAccessibilityService : AccessibilityService() {
             WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
             PixelFormat.TRANSLUCENT
-        ).apply { gravity = Gravity.CENTER }
+        ).apply {
+            gravity = Gravity.CENTER
+            horizontalMargin = 0.06f
+        }
 
-        windowManager.addView(panel, params)
-        overlay = panel
+        runCatching {
+            windowManager.addView(panel, params)
+            overlay = panel
+        }
     }
 
     private fun removeOverlay() {
@@ -133,8 +182,6 @@ class DoomAccessibilityService : AccessibilityService() {
         }
         overlay = null
     }
-
-    private fun packageNameOfService() = packageName
 
     override fun onInterrupt() = Unit
 
