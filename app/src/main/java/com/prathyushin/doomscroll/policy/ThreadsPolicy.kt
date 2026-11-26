@@ -5,6 +5,7 @@ import java.net.URI
 enum class ThreadsRouteAction {
     ALLOW,
     ALLOW_AUTH_REDIRECT,
+    BLOCK_APP_HANDOFF,
     BLOCK_LOOP_REDIRECT,
     OPEN_EXTERNAL_BROWSER
 }
@@ -15,13 +16,19 @@ data class ThreadsDecision(
 )
 
 /**
- * Threads route & redirect-loop protection policy.
+ * Threads route, app-handoff suppression, and redirect-loop protection policy.
  */
 class ThreadsPolicy {
     private var lastRedirectUrl: String? = null
     private var consecutiveSameRedirects: Int = 0
 
     fun evaluateUrl(targetUrl: String): ThreadsDecision {
+        // Intercept Meta's "Open in Threads app" deep links so WebView stays intact
+        val lower = targetUrl.lowercase()
+        if (lower.startsWith("intent://") || lower.startsWith("barcelona://") || lower.startsWith("threads://")) {
+            return ThreadsDecision(ThreadsRouteAction.BLOCK_APP_HANDOFF, "Stay inside Doom Scroll WebView")
+        }
+
         val uri = runCatching { URI(targetUrl) }.getOrNull()
             ?: return ThreadsDecision(ThreadsRouteAction.OPEN_EXTERNAL_BROWSER, "Malformed URL")
 
@@ -30,7 +37,7 @@ class ThreadsPolicy {
 
         if (targetUrl == lastRedirectUrl) {
             consecutiveSameRedirects++
-            if (consecutiveSameRedirects > 3) {
+            if (consecutiveSameRedirects > 5) {
                 return ThreadsDecision(ThreadsRouteAction.BLOCK_LOOP_REDIRECT, "Prevented redirect loop")
             }
         } else {
@@ -55,10 +62,11 @@ class ThreadsPolicy {
     }
 
     private fun isThreadsHost(host: String): Boolean =
-        host == "threads.net" || host.endsWith(".threads.net") ||
-            host == "threads.com" || host.endsWith(".threads.com")
+        host == "threads.com" || host.endsWith(".threads.com") ||
+            host == "threads.net" || host.endsWith(".threads.net")
 
     private fun isMetaAuthHost(host: String): Boolean =
         host == "instagram.com" || host.endsWith(".instagram.com") ||
-            host.endsWith("facebook.com") || host.endsWith("meta.com")
+            host.endsWith("facebook.com") || host.endsWith("meta.com") ||
+            host.endsWith("fbcdn.net") || host.endsWith("cdninstagram.com")
 }

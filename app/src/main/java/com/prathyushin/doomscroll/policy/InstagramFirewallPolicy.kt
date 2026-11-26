@@ -17,15 +17,16 @@ data class FirewallDecision(
 
 /**
  * Instagram Feed Firewall route policy.
- * Preserves posts, Stories, profiles, DMs, comments, likes, and explicit search,
- * while restricting Reels, Explore, and endless next-Reel consumption.
+ * Preserves posts, Stories, profiles, DMs, comments, likes, and intentional Search/Explore,
+ * while restricting the Reels feed tab and endless next-Reel consumption.
+ * Allows a single Reel intentionally opened from DMs or Search results.
  */
 class InstagramFirewallPolicy {
 
-    private var activeDmReelId: String? = null
+    private var activeIntentionalReelId: String? = null
 
     fun resetDmReelAllowance() {
-        activeDmReelId = null
+        activeIntentionalReelId = null
     }
 
     fun evaluateUrl(
@@ -36,9 +37,14 @@ class InstagramFirewallPolicy {
         val uri = runCatching { URI(targetUrl) }.getOrNull()
             ?: return FirewallDecision(RouteAction.OPEN_EXTERNAL_BROWSER, "Malformed URL")
 
-        val host = uri.host?.lowercase() ?: return FirewallDecision(RouteAction.OPEN_EXTERNAL_BROWSER, "Missing host")
+        val scheme = uri.scheme?.lowercase().orEmpty()
+        if (scheme == "intent" || scheme == "instagram") {
+            return FirewallDecision(RouteAction.BLOCK_REDIRECT_HOME, "Keep navigation inside Doom Scroll")
+        }
 
-        // Allow Meta auth / SSO / CDN hosts inside WebView
+        val host = uri.host?.lowercase()
+            ?: return FirewallDecision(RouteAction.OPEN_EXTERNAL_BROWSER, "Missing host")
+
         if (isAuthOrCdnHost(host)) {
             return FirewallDecision(RouteAction.ALLOW, "Auth or CDN host")
         }
@@ -49,12 +55,13 @@ class InstagramFirewallPolicy {
 
         val path = (uri.path ?: "/").lowercase()
 
-        // Block Explore
+        // Allow /explore/ for intentional search (mindless discovery grid is hidden via DOM CSS/JS)
         if (path == "/explore" || path.startsWith("/explore/")) {
-            return FirewallDecision(RouteAction.BLOCK_REDIRECT_HOME, "Explore is restricted in Zen mode")
+            activeIntentionalReelId = null
+            return FirewallDecision(RouteAction.ALLOW, "Intentional Search & Explore")
         }
 
-        // Block Reels feed tab
+        // Block endless Reels feed tab
         if (path == "/reels" || path == "/reels/" || path.startsWith("/reels/videos")) {
             return FirewallDecision(RouteAction.BLOCK_REDIRECT_HOME, "Reels feed is restricted")
         }
@@ -63,27 +70,25 @@ class InstagramFirewallPolicy {
         val reelId = extractReelId(path)
         if (reelId != null) {
             if (strictFocusMode) {
-                return FirewallDecision(RouteAction.BLOCK_REDIRECT_HOME, "Reels are strictly blocked during Focus Schedule")
+                return FirewallDecision(RouteAction.BLOCK_REDIRECT_HOME, "Reels are blocked during Focus Schedule")
             }
 
-            val fromDm = isFromDirectMessages(refererUrl)
-            if (fromDm) {
-                activeDmReelId = reelId
-                return FirewallDecision(RouteAction.ALLOW_SINGLE_DM_REEL, "Single Reel opened from DMs")
+            if (isIntentionalReelSource(refererUrl)) {
+                activeIntentionalReelId = reelId
+                return FirewallDecision(RouteAction.ALLOW_SINGLE_DM_REEL, "Single intentional Reel opened")
             }
 
-            if (activeDmReelId == reelId) {
-                return FirewallDecision(RouteAction.ALLOW_SINGLE_DM_REEL, "Active DM-origin Reel")
+            if (activeIntentionalReelId == reelId) {
+                return FirewallDecision(RouteAction.ALLOW_SINGLE_DM_REEL, "Active single intentional Reel")
             }
 
-            // Navigating to a different Reel without coming from DMs -> block endless next-Reel consumption
-            activeDmReelId = null
-            return FirewallDecision(RouteAction.BLOCK_REDIRECT_HOME, "Next-Reel browsing is restricted")
+            // Navigating to a different Reel -> block endless next-Reel consumption
+            activeIntentionalReelId = null
+            return FirewallDecision(RouteAction.BLOCK_REDIRECT_HOME, "Next-Reel scrolling is restricted")
         }
 
-        // Any non-Reel navigation clears active DM Reel allowance unless staying in /direct/
-        if (!path.startsWith("/direct")) {
-            activeDmReelId = null
+        if (!path.startsWith("/direct") && !path.startsWith("/explore")) {
+            activeIntentionalReelId = null
         }
 
         return FirewallDecision(RouteAction.ALLOW, "Intentional Instagram route")
@@ -97,11 +102,14 @@ class InstagramFirewallPolicy {
         return null
     }
 
-    private fun isFromDirectMessages(refererUrl: String?): Boolean {
+    private fun isIntentionalReelSource(refererUrl: String?): Boolean {
         if (refererUrl.isNullOrBlank()) return false
         val uri = runCatching { URI(refererUrl) }.getOrNull() ?: return false
         val path = (uri.path ?: "").lowercase()
-        return path.startsWith("/direct")
+        return path.startsWith("/direct") ||
+            path.startsWith("/explore") ||
+            path.startsWith("/p/") ||
+            (path != "/" && !path.startsWith("/reel"))
     }
 
     private fun isInstagramHost(host: String): Boolean =

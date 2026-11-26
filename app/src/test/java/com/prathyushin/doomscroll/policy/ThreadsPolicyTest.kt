@@ -17,10 +17,23 @@ class ThreadsPolicyTest {
     }
 
     @Test
+    fun blocksAppHandoffDeepLinks() {
+        val policy = ThreadsPolicy()
+        assertEquals(
+            ThreadsRouteAction.BLOCK_APP_HANDOFF,
+            policy.evaluateUrl("intent://threads.net/#Intent;package=com.instagram.barcelona;end").action
+        )
+        assertEquals(
+            ThreadsRouteAction.BLOCK_APP_HANDOFF,
+            policy.evaluateUrl("barcelona://open").action
+        )
+    }
+
+    @Test
     fun blocksConsecutiveRedirectLoops() {
         val policy = ThreadsPolicy()
-        val url = "https://www.threads.net/login"
-        repeat(4) { policy.evaluateUrl(url) }
+        val url = "https://www.threads.com/login"
+        repeat(6) { policy.evaluateUrl(url) }
         assertEquals(ThreadsRouteAction.BLOCK_LOOP_REDIRECT, policy.evaluateUrl(url).action)
     }
 

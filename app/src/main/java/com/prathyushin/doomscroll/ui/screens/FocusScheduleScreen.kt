@@ -239,7 +239,7 @@ internal fun ScreenHeader(
             onClick = onBack,
             modifier = Modifier.defaultMinSize(minHeight = 48.dp)
         ) {
-            Text("← Back to Zen", color = ZenColors.Mint, fontWeight = FontWeight.SemiBold)
+            Text("← Back", color = ZenColors.Mint, fontWeight = FontWeight.SemiBold)
         }
         Text(
             text = title,

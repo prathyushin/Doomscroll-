@@ -103,9 +103,9 @@ fun ZenDashboardScreen(
             Spacer(Modifier.height(4.dp))
             Text(
                 text = if (focusEvaluation.strictReelsBlock) {
-                    "Reels & Explore restricted • Focus strict mode on"
+                    "Reels restricted • Search enabled • Focus strict mode on"
                 } else {
-                    "Reels & Explore restricted • DM Reels limited to one"
+                    "Reels restricted • Search enabled • DM Reels limited to one"
                 },
                 color = ZenColors.TextMuted,
                 style = MaterialTheme.typography.bodyMedium
@@ -251,7 +251,7 @@ fun ZenDashboardScreen(
             )
             DashboardRow(
                 title = "About Doom Scroll",
-                subtitle = "v2.0.0 Zen • Built by Pranav and Prathyush",
+                subtitle = "v2.0.1 Zen • Built by Pranav and Prathyush",
                 onClick = { onNavigate(ZenDestination.ABOUT) }
             )
         }

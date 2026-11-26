@@ -6,10 +6,10 @@ import org.junit.Test
 class InstagramFirewallPolicyTest {
 
     @Test
-    fun blocksExploreAndReelsTab() {
+    fun allowsExploreForIntentionalSearchAndBlocksReelsTab() {
         val policy = InstagramFirewallPolicy()
         assertEquals(
-            RouteAction.BLOCK_REDIRECT_HOME,
+            RouteAction.ALLOW,
             policy.evaluateUrl("https://www.instagram.com/explore/").action
         )
         assertEquals(
@@ -19,7 +19,7 @@ class InstagramFirewallPolicyTest {
     }
 
     @Test
-    fun allowsSingleDmReelAndBlocksNextReel() {
+    fun allowsSingleDmOrSearchReelAndBlocksNextReel() {
         val policy = InstagramFirewallPolicy()
         val dmReel = policy.evaluateUrl(
             targetUrl = "https://www.instagram.com/reel/ABC123/",
@@ -33,6 +33,13 @@ class InstagramFirewallPolicyTest {
             refererUrl = "https://www.instagram.com/reel/ABC123/"
         )
         assertEquals(RouteAction.BLOCK_REDIRECT_HOME, nextReel.action)
+
+        // Single Reel intentionally opened from Explore search should be allowed
+        val searchReel = policy.evaluateUrl(
+            targetUrl = "https://www.instagram.com/reel/FOOD456/",
+            refererUrl = "https://www.instagram.com/explore/search/keyword/?q=food"
+        )
+        assertEquals(RouteAction.ALLOW_SINGLE_DM_REEL, searchReel.action)
     }
 
     @Test

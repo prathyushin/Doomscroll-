@@ -4,10 +4,10 @@
 
 Doom Scroll combines Instagram and Threads into a single lightweight Android app built with Kotlin and Jetpack Compose. Instead of cutting you off from social media, it preserves useful social connections—DMs, Stories, profiles, posts, comments, likes, and replies—while reducing addictive scrolling, algorithmic recommendations, and mindless consumption.
 
-## Latest Release — `v2.0.0` (Zen)
+## Latest Release — `v2.0.1` (Zen)
 
-- **[Download Doom Scroll v2.0.0 APK](https://github.com/prathyushin/Doomscroll-/releases/download/v2.0.0/app-debug.apk)**
-- [View v2.0.0 Release Notes](https://github.com/prathyushin/Doomscroll-/releases/tag/v2.0.0)
+- **[Download Doom Scroll v2.0.1 APK](https://github.com/prathyushin/Doomscroll-/releases/download/v2.0.1/app-debug.apk)**
+- [View v2.0.1 Release Notes](https://github.com/prathyushin/Doomscroll-/releases/tag/v2.0.1)
 - [All Releases](https://github.com/prathyushin/Doomscroll-/releases)
 
 > **Direct-Install Compatibility:** This release omits system-wide Accessibility and Notification Listener manifest declarations so Google Play Protect Enhanced Fraud Protection does not block installation when sideloading the APK. All core controls—Feed Firewall, Behavioral Intervention Engine, Smart Focus Schedule, Local Story Controls, Privacy Dashboard, and Floating Glass Dock—run locally inside Doom Scroll with zero sensitive system permissions.
@@ -15,7 +15,7 @@ Doom Scroll combines Instagram and Threads into a single lightweight Android app
 ## Key Features
 
 - **Instagram & Threads in One Controlled App:** Persistent WebViews for both platforms with shared Meta cookie persistence, instant tab switching without unnecessary reloads, fullscreen media support, file/media picker integration, and automatic renderer crash recovery.
-- **Instagram Feed Firewall:** Preserves posts, Stories, profiles, DMs, comments, and likes while blocking Explore, the Reels feed, and suggested recommendation cards. Allows viewing a single Reel intentionally opened from DMs while preventing endless next-Reel consumption.
+- **Instagram Feed Firewall:** Preserves posts, Stories, profiles, DMs, comments, and likes while blocking the Reels feed and suggested recommendation cards while keeping Search & Explore accessible for finding accounts and topics. Allows viewing a single Reel intentionally opened from DMs while preventing endless next-Reel consumption.
 - **Threads Integration:** Full Threads environment with redirect-loop protection, Following-tab preference, and session controls.
 - **Behavioral Intervention Engine:** Centralized state-driven policy engine (`IDLE → ACTIVE → GENTLE_PAUSE → COOLDOWN`) with configurable session limits, scroll and reopen detection, calm non-punitive pause prompts, cooldowns, and session recovery.
 - **Smart Focus Schedule:** Custom start/end times, weekday rules, overnight wrap-around handling, live timezone and system-clock change awareness, and strict Reels blocking during active focus windows.

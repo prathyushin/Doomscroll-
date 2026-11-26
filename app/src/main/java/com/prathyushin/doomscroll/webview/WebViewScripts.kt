@@ -2,7 +2,11 @@ package com.prathyushin.doomscroll.webview
 
 /**
  * Lightweight, privacy-first DOM & SPA navigation scripts for Instagram and Threads.
- * All scripts are idempotent and resilient to Meta markup changes.
+ * - Instagram: preserves Search/Explore bar & results, hides mindless Explore grid & Reels tab,
+ *   allows single intentional Reel from DMs or Search, blocks next-Reel scrolling.
+ * - Threads: keeps navigation inside WebView, suppresses "Open in app" nags, prefers Following tab.
+ * - Calm dock signaling: only hides dock after sustained downward scroll (>120px) and reveals at top,
+ *   never popping up repeatedly on small scroll bounces.
  */
 object WebViewScripts {
 
@@ -31,20 +35,38 @@ object WebViewScripts {
                 window.__doomZenLastPath = window.location.pathname || '/';
 
                 var lastY = window.scrollY || 0;
+                var downAccum = 0;
                 var scrollTick = 0;
+                var dockHiddenByScroll = false;
 
                 window.addEventListener('scroll', function() {
                     var y = window.scrollY || 0;
                     var delta = y - lastY;
-                    if (Math.abs(delta) > 24) {
+                    lastY = y;
+
+                    if (y <= 32 && dockHiddenByScroll) {
+                        dockHiddenByScroll = false;
+                        downAccum = 0;
                         if (window.DoomZenBridge && window.DoomZenBridge.onScrollDirection) {
-                            window.DoomZenBridge.onScrollDirection(delta > 0);
+                            window.DoomZenBridge.onScrollDirection(false);
                         }
+                    } else if (delta > 0) {
+                        downAccum += delta;
+                        if (downAccum > 140 && !dockHiddenByScroll) {
+                            dockHiddenByScroll = true;
+                            if (window.DoomZenBridge && window.DoomZenBridge.onScrollDirection) {
+                                window.DoomZenBridge.onScrollDirection(true);
+                            }
+                        }
+                    } else if (delta < -20) {
+                        downAccum = 0;
+                    }
+
+                    if (Math.abs(delta) > 36) {
                         scrollTick++;
                         if (scrollTick % 3 === 0 && window.DoomZenBridge && window.DoomZenBridge.onUserScroll) {
                             window.DoomZenBridge.onUserScroll();
                         }
-                        lastY = y;
                     }
                 }, { passive: true });
 
@@ -52,10 +74,7 @@ object WebViewScripts {
                     var path = (window.location.pathname || '/').toLowerCase();
                     var prevPath = (window.__doomZenLastPath || '/').toLowerCase();
 
-                    if (path === '/explore' || path.indexOf('/explore/') === 0) {
-                        window.location.replace('https://www.instagram.com/');
-                        return;
-                    }
+                    // Block endless Reels feed tab, but keep /explore/ open for intentional Search
                     if (path === '/reels' || path === '/reels/' || path.indexOf('/reels/videos') === 0) {
                         window.location.replace('https://www.instagram.com/');
                         return;
@@ -68,15 +87,15 @@ object WebViewScripts {
                             window.location.replace('https://www.instagram.com/');
                             return;
                         }
-                        if (prevPath.indexOf('/direct') === 0) {
+                        if (prevPath.indexOf('/direct') === 0 || prevPath.indexOf('/explore') === 0 || (prevPath !== '/' && prevPath.indexOf('/reel') !== 0)) {
                             window.__doomZenDmReelId = id;
                         }
                         if (!window.__doomZenDmReelId || window.__doomZenDmReelId !== id) {
                             window.__doomZenDmReelId = null;
-                            window.location.replace('https://www.instagram.com/direct/inbox/');
+                            window.location.replace('https://www.instagram.com/');
                             return;
                         }
-                    } else if (path.indexOf('/direct') !== 0) {
+                    } else if (path.indexOf('/direct') !== 0 && path.indexOf('/explore') !== 0) {
                         window.__doomZenDmReelId = null;
                     }
 
@@ -86,16 +105,28 @@ object WebViewScripts {
                 function applyIgDomFirewall() {
                     enforceIgRoute();
 
-                    // Hide Reels & Explore navigation links
-                    var navLinks = document.querySelectorAll('a[href*="/reels"], a[href*="/explore"]');
-                    navLinks.forEach(function(el) {
-                        var href = (el.getAttribute('href') || '').toLowerCase();
-                        if (href === '/reels/' || href === '/reels' || href === '/explore/' || href === '/explore') {
-                            el.style.display = 'none';
-                        }
+                    var path = (window.location.pathname || '/').toLowerCase();
+
+                    // Hide Reels navigation tab, but KEEP Search/Explore nav link visible!
+                    var reelsLinks = document.querySelectorAll('a[href="/reels/"], a[href="/reels"]');
+                    reelsLinks.forEach(function(el) {
+                        el.style.display = 'none';
                     });
 
-                    // Best-effort suppression of Suggested / Recommended feed cards
+                    // On /explore/ root (when no search query is typed), hide only the mindless recommendation grid while keeping the Search bar & results usable
+                    if (path === '/explore' || path === '/explore/') {
+                        var searchInput = document.querySelector('input[type="search"], input[aria-label*="Search"], input[placeholder*="Search"]');
+                        var hasQuery = searchInput && (searchInput.value || '').trim().length > 0;
+                        var mainGrid = document.querySelector('main div[style*="flex-direction: column"] > div > div > div > a[href*="/p/"], main div a[href*="/reel/"]');
+                        if (mainGrid && mainGrid.closest('main')) {
+                            var gridContainer = mainGrid.closest('div[style*="position: relative"]') || mainGrid.parentElement;
+                            if (gridContainer) {
+                                gridContainer.style.display = hasQuery ? '' : 'none';
+                            }
+                        }
+                    }
+
+                    // Best-effort suppression of Suggested / Recommended home feed cards
                     var spans = document.querySelectorAll('span, div');
                     for (var i = 0; i < spans.length; i++) {
                         var txt = (spans[i].textContent || '').trim();
@@ -105,7 +136,7 @@ object WebViewScripts {
                         }
                     }
 
-                    // Local Story mute: dim and mark muted story tiles without altering IG account settings
+                    // Local Story mute: dim muted story tiles without modifying IG account settings
                     var muted = window.__doomZenMuted || [];
                     var storyButtons = document.querySelectorAll('[role="menuitem"], button[aria-label*="Story by"], div[role="button"][aria-label*="Story"]');
                     storyButtons.forEach(function(btn) {
@@ -118,11 +149,6 @@ object WebViewScripts {
                             }
                         }
                         btn.style.opacity = isMuted ? '0.2' : '';
-                        if (isMuted) {
-                            btn.setAttribute('data-zen-muted', 'true');
-                        } else {
-                            btn.removeAttribute('data-zen-muted');
-                        }
                     });
                 }
 
@@ -176,20 +202,38 @@ object WebViewScripts {
             window.__doomZenThreadsInit = true;
 
             var lastY = window.scrollY || 0;
+            var downAccum = 0;
             var scrollTick = 0;
+            var dockHiddenByScroll = false;
 
             window.addEventListener('scroll', function() {
                 var y = window.scrollY || 0;
                 var delta = y - lastY;
-                if (Math.abs(delta) > 24) {
+                lastY = y;
+
+                if (y <= 32 && dockHiddenByScroll) {
+                    dockHiddenByScroll = false;
+                    downAccum = 0;
                     if (window.DoomZenBridge && window.DoomZenBridge.onScrollDirection) {
-                        window.DoomZenBridge.onScrollDirection(delta > 0);
+                        window.DoomZenBridge.onScrollDirection(false);
                     }
+                } else if (delta > 0) {
+                    downAccum += delta;
+                    if (downAccum > 140 && !dockHiddenByScroll) {
+                        dockHiddenByScroll = true;
+                        if (window.DoomZenBridge && window.DoomZenBridge.onScrollDirection) {
+                            window.DoomZenBridge.onScrollDirection(true);
+                        }
+                    }
+                } else if (delta < -20) {
+                    downAccum = 0;
+                }
+
+                if (Math.abs(delta) > 36) {
                     scrollTick++;
                     if (scrollTick % 3 === 0 && window.DoomZenBridge && window.DoomZenBridge.onUserScroll) {
                         window.DoomZenBridge.onUserScroll();
                     }
-                    lastY = y;
                 }
             }, { passive: true });
 
@@ -204,7 +248,7 @@ object WebViewScripts {
                 }
             }
 
-            setTimeout(preferFollowingTab, 900);
+            setTimeout(preferFollowingTab, 1200);
         })();
     """.trimIndent()
 }

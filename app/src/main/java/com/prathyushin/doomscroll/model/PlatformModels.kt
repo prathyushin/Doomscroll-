@@ -8,13 +8,13 @@ enum class SocialPlatform(val displayName: String, val homeUrl: String, val host
     ),
     THREADS(
         displayName = "Threads",
-        homeUrl = "https://www.threads.net/",
-        hostSuffixes = setOf("threads.net", "threads.com")
+        homeUrl = "https://www.threads.com/",
+        hostSuffixes = setOf("threads.com", "threads.net")
     )
 }
 
 enum class ZenDestination(val label: String) {
-    DASHBOARD("Zen"),
+    DASHBOARD("Settings"),
     INSTAGRAM("Instagram"),
     THREADS("Threads"),
     FOCUS("Focus Schedule"),

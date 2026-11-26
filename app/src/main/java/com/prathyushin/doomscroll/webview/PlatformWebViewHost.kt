@@ -141,7 +141,8 @@ class PlatformWebViewPool(
             builtInZoomControls = false
             setSupportMultipleWindows(false)
             // Strip "; wv" token so Meta/Threads OAuth and login flows do not reject the embedded browser
-            userAgentString = userAgentString.replace("; wv", "")
+            userAgentString = userAgentString.replace("; wv", "").replace("Version/4.0 ", "")
+            cacheMode = WebSettings.LOAD_DEFAULT
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 safeBrowsingEnabled = true
             }
@@ -196,6 +197,7 @@ class PlatformWebViewPool(
                         when (decision.action) {
                             ThreadsRouteAction.ALLOW,
                             ThreadsRouteAction.ALLOW_AUTH_REDIRECT -> false
+                            ThreadsRouteAction.BLOCK_APP_HANDOFF -> true
                             ThreadsRouteAction.BLOCK_LOOP_REDIRECT -> {
                                 threadsPolicy.resetLoopGuard()
                                 true

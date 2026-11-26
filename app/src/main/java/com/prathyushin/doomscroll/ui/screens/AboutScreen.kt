@@ -6,7 +6,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,7 +13,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
@@ -26,6 +27,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.prathyushin.doomscroll.ui.components.DoomEmblem
@@ -33,8 +35,8 @@ import com.prathyushin.doomscroll.ui.theme.ZenColors
 import com.prathyushin.doomscroll.ui.theme.ZenGlassCard
 
 /**
- * Liquid-glass-inspired About page (inspired by modern translucent glass interfaces such as Glisse)
- * with app identity, version, privacy philosophy, and discreet developer credits.
+ * Liquid-glass-inspired About page with app identity, version tag,
+ * privacy philosophy, and refined, spacious developer credits.
  */
 @Composable
 fun AboutScreen(onBack: () -> Unit) {
@@ -78,7 +80,7 @@ fun AboutScreen(onBack: () -> Unit) {
                     ),
                     RoundedCornerShape(30.dp)
                 )
-                .padding(24.dp)
+                .padding(horizontal = 24.dp, vertical = 28.dp)
         ) {
             Column(
                 modifier = Modifier.fillMaxWidth(),
@@ -92,32 +94,42 @@ fun AboutScreen(onBack: () -> Unit) {
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold
                 )
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = "Version 2.0.0 Zen",
-                    color = ZenColors.Mint,
-                    style = MaterialTheme.typography.labelLarge,
-                    letterSpacing = 0.8.sp
-                )
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(6.dp))
+                Box(
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .background(ZenColors.Mint.copy(alpha = 0.12f))
+                        .border(1.dp, ZenColors.Mint.copy(alpha = 0.28f), CircleShape)
+                        .padding(horizontal = 12.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = "Version 2.0.1 Zen",
+                        color = ZenColors.Mint,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        letterSpacing = 0.6.sp
+                    )
+                }
+                Spacer(Modifier.height(14.dp))
                 Text(
                     text = "Social connection without the algorithmic undertow.",
                     color = ZenColors.TextMuted,
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center
                 )
             }
         }
 
         // Privacy Philosophy
-        ZenGlassCard(cornerRadius = 26.dp) {
+        ZenGlassCard(cornerRadius = 26.dp, padding = 20.dp) {
             Text(
                 text = "PRIVACY PHILOSOPHY",
                 color = ZenColors.Mint,
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold,
-                letterSpacing = 1.1.sp
+                letterSpacing = 1.2.sp
             )
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(10.dp))
             Text(
                 text = "Doom Scroll runs entirely on your device. There are no accounts, no analytics pipelines, no ad profiles, and no remote servers reading your messages or feeds.",
                 color = ZenColors.TextPrimary,
@@ -131,23 +143,47 @@ fun AboutScreen(onBack: () -> Unit) {
             )
         }
 
-        // Discreet Credits
-        ZenGlassCard(cornerRadius = 22.dp, padding = 16.dp) {
-            Row(
+        // Refined, spacious developer credits card (no overlapping or cramped text)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(26.dp))
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            ZenColors.PanelElevated.copy(alpha = 0.85f),
+                            ZenColors.Panel.copy(alpha = 0.95f)
+                        )
+                    )
+                )
+                .border(1.dp, ZenColors.GlassBorder, RoundedCornerShape(26.dp))
+                .padding(horizontal = 24.dp, vertical = 22.dp)
+        ) {
+            Column(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                Box(
+                    modifier = Modifier
+                        .width(32.dp)
+                        .height(2.dp)
+                        .clip(CircleShape)
+                        .background(ZenColors.Mint.copy(alpha = 0.6f))
+                )
+                Spacer(Modifier.height(2.dp))
                 Text(
-                    text = "Crafted independently",
+                    text = "CRAFTED INDEPENDENTLY",
                     color = ZenColors.TextMuted,
-                    style = MaterialTheme.typography.bodySmall
+                    style = MaterialTheme.typography.labelSmall,
+                    letterSpacing = 1.4.sp
                 )
                 Text(
                     text = "Built by Pranav and Prathyush",
                     color = ZenColors.TextPrimary,
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.Medium
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Center
                 )
             }
         }
