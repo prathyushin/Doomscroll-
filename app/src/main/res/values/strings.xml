@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Doom Scroll Zen</string>
-    <string name="accessibility_description">Doom Scroll monitors selected app sessions locally and can offer a gentle pause when sustained scrolling or long sessions cross your chosen limits. It does not read message content or collect data remotely.</string>
-    <string name="notification_listener_label">Doom Scroll Zen Notification Filter</string>
+    <string name="app_name">Doom Scroll</string>
+    <string name="accessibility_description">Doom Scroll keeps your Instagram and Threads sessions intentional locally on this device without reading message content or sending data remotely.</string>
+    <string name="notification_listener_label">Doom Scroll Notification Filter</string>
 </resources>

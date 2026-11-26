@@ -87,14 +87,14 @@ fun AboutScreen(onBack: () -> Unit) {
                 DoomEmblem(modifier = Modifier.size(76.dp))
                 Spacer(Modifier.height(16.dp))
                 Text(
-                    text = "Doom Scroll Zen",
+                    text = "Doom Scroll",
                     color = ZenColors.TextPrimary,
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    text = "Version 2.0.0",
+                    text = "Version 2.0.0 Zen",
                     color = ZenColors.Mint,
                     style = MaterialTheme.typography.labelLarge,
                     letterSpacing = 0.8.sp
@@ -119,7 +119,7 @@ fun AboutScreen(onBack: () -> Unit) {
             )
             Spacer(Modifier.height(8.dp))
             Text(
-                text = "Doom Scroll Zen runs entirely on your device. There are no accounts, no analytics pipelines, no ad profiles, and no remote servers reading your messages or feeds.",
+                text = "Doom Scroll runs entirely on your device. There are no accounts, no analytics pipelines, no ad profiles, and no remote servers reading your messages or feeds.",
                 color = ZenColors.TextPrimary,
                 style = MaterialTheme.typography.bodyMedium
             )

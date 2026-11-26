@@ -66,7 +66,7 @@ fun ZenDashboardScreen(
             DoomEmblem(modifier = Modifier.size(54.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "DOOM SCROLL ZEN",
+                    text = "DOOM SCROLL",
                     color = ZenColors.TextPrimary,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
@@ -250,8 +250,8 @@ fun ZenDashboardScreen(
                 onClick = { onNavigate(ZenDestination.PRIVACY) }
             )
             DashboardRow(
-                title = "About Doom Scroll Zen",
-                subtitle = "v2.0.0 • Built by Pranav and Prathyush",
+                title = "About Doom Scroll",
+                subtitle = "v2.0.0 Zen • Built by Pranav and Prathyush",
                 onClick = { onNavigate(ZenDestination.ABOUT) }
             )
         }
