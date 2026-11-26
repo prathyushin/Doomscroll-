@@ -50,18 +50,18 @@ fun DoomScrollApp() {
         )
     ) {
         Column(
-            Modifier.fillMaxSize().background(Ink).padding(horizontal = 20.dp, vertical = 18.dp),
+            Modifier.fillMaxSize().background(Ink).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 18.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 DoomEmblem(Modifier.size(58.dp))
                 Column {
-                    Text("DOOM SCROLL", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black, letterSpacing = 1.6.sp)
+                    Text("DOOM SCROLL ZEN", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black, letterSpacing = 1.6.sp)
                     Text("Make the scroll intentional.", color = Muted, style = MaterialTheme.typography.bodyMedium)
                 }
             }
 
-            Column(Modifier.fillMaxWidth().weight(1f), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(26.dp)).background(Panel).padding(20.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
@@ -130,7 +130,7 @@ fun DoomScrollApp() {
                         Text("A small tool to help make digital time more deliberate.", style = MaterialTheme.typography.bodyMedium)
                         Spacer(Modifier.height(6.dp))
                         Text("Built by Pranav and Prathyush", color = Muted, style = MaterialTheme.typography.bodySmall)
-                        Text("Version 2.0.0", color = Muted, style = MaterialTheme.typography.bodySmall)
+                        Text("Version 2.0.0 Zen", color = Muted, style = MaterialTheme.typography.bodySmall)
                     }
                 }
             }
