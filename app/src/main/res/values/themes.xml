@@ -1,9 +1,10 @@
 <resources>
-    <style name="Theme.DoomScroll" parent="android:style/Theme.Material.Light.NoActionBar">
+    <style name="Theme.DoomScroll" parent="android:style/Theme.Material.NoActionBar">
         <item name="android:fontFamily">sans</item>
-        <item name="android:colorAccent">#8B1735</item>
-        <item name="android:navigationBarColor">#FFF3E6</item>
-        <item name="android:statusBarColor">#FFF3E6</item>
-        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:colorAccent">#B8F2D0</item>
+        <item name="android:navigationBarColor">#101114</item>
+        <item name="android:statusBarColor">#101114</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowBackground">#101114</item>
     </style>
 </resources>
