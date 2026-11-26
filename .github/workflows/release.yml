@@ -3,6 +3,13 @@ name: Doom Scroll Stable Release
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Stable release tag"
+        required: true
+        default: "v2.0.0"
+        type: string
 
 permissions:
   contents: write
@@ -12,6 +19,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
 
       - uses: actions/setup-java@v4
         with:
@@ -31,15 +40,16 @@ jobs:
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: DoomScroll-${{ github.ref_name }}
+          name: DoomScroll-${{ inputs.release_tag || github.ref_name }}
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: Doom Scroll ${{ github.ref_name }}
-          tag_name: ${{ github.ref_name }}
+          name: Doom Scroll ${{ inputs.release_tag || github.ref_name }}
+          tag_name: ${{ inputs.release_tag || github.ref_name }}
+          target_commitish: ${{ github.sha }}
           prerelease: false
           generate_release_notes: true
           files: app/build/outputs/apk/debug/app-debug.apk
