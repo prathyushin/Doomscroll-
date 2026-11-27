@@ -90,7 +90,7 @@ fun ZenDashboardScreen(
                                 .padding(horizontal = 8.dp, vertical = 2.dp)
                         ) {
                             Text(
-                                text = "v2.1.2",
+                                text = "v2.1.3",
                                 color = ZenColors.Mint,
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.SemiBold
@@ -112,37 +112,18 @@ fun ZenDashboardScreen(
 
             Spacer(Modifier.height(16.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            Button(
+                onClick = { onNavigate(ZenDestination.INSTAGRAM) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .defaultMinSize(minHeight = 48.dp),
+                shape = RoundedCornerShape(18.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = ZenColors.Mint,
+                    contentColor = ZenColors.Charcoal
+                )
             ) {
-                Button(
-                    onClick = { onNavigate(ZenDestination.INSTAGRAM) },
-                    modifier = Modifier
-                        .weight(1f)
-                        .defaultMinSize(minHeight = 48.dp),
-                    shape = RoundedCornerShape(18.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = ZenColors.Mint,
-                        contentColor = ZenColors.Charcoal
-                    )
-                ) {
-                    Text("Instagram", fontWeight = FontWeight.Bold)
-                }
-                OutlinedButton(
-                    onClick = { onNavigate(ZenDestination.THREADS) },
-                    modifier = Modifier
-                        .weight(1f)
-                        .defaultMinSize(minHeight = 48.dp),
-                    shape = RoundedCornerShape(18.dp),
-                    border = BorderStroke(1.dp, ZenColors.GlassBorderBright.copy(alpha = 0.35f)),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        containerColor = Color.White.copy(alpha = 0.06f),
-                        contentColor = ZenColors.TextPrimary
-                    )
-                ) {
-                    Text("Threads", fontWeight = FontWeight.SemiBold)
-                }
+                Text("Open Instagram", fontWeight = FontWeight.Bold)
             }
         }
 
@@ -305,7 +286,7 @@ fun ZenDashboardScreen(
             )
             ZenGlassPillRow(
                 title = "About Doom Scroll",
-                subtitle = "v2.1.2 Zen • Built by Pranav and Prathyush",
+                subtitle = "v2.1.3 Zen • Built by Pranav and Prathyush",
                 badgeGlyph = "✦",
                 onClick = { onNavigate(ZenDestination.ABOUT) }
             )

@@ -103,7 +103,7 @@ fun AboutScreen(onBack: () -> Unit) {
                         .padding(horizontal = 12.dp, vertical = 4.dp)
                 ) {
                     Text(
-                        text = "Version 2.1.2 Zen",
+                        text = "Version 2.1.3 Zen",
                         color = ZenColors.Mint,
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,

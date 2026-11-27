@@ -90,8 +90,8 @@ fun DoomScrollApp() {
     val notificationStats by sessionManager.notificationStats.collectAsState()
     val todayMinutes by sessionManager.todayMinutes.collectAsState()
 
-    var destination by remember { mutableStateOf(ZenDestination.DASHBOARD) }
-    var dockVisible by remember { mutableStateOf(true) }
+    var destination by remember { mutableStateOf(ZenDestination.INSTAGRAM) }
+    var dockVisible by remember { mutableStateOf(false) }
     var selectedApps by remember { mutableStateOf(store.policies()) }
     var isAppResumed by remember { mutableStateOf(true) }
 
@@ -140,7 +140,9 @@ fun DoomScrollApp() {
                 sessionManager.onWebViewScroll(platform)
             },
             onScrollDirection = { scrollingDown ->
-                dockVisible = !scrollingDown
+                if (scrollingDown) {
+                    dockVisible = false
+                }
             },
             onStoryLongPress = { username ->
                 sessionManager.toggleStoryMute(username)
@@ -240,21 +242,32 @@ fun DoomScrollApp() {
         else -> null
     }
 
+    // Start hidden on Instagram; stay visible on Settings screens
+    LaunchedEffect(activePlatform) {
+        dockVisible = activePlatform == null
+    }
+
+    // Auto-hide dock 3 seconds after being revealed while browsing Instagram
+    LaunchedEffect(dockVisible, activePlatform) {
+        if (dockVisible && activePlatform != null) {
+            delay(3000L)
+            dockVisible = false
+        }
+    }
+
     LaunchedEffect(activePlatform, isAppResumed) {
         if (activePlatform != null && isAppResumed) {
-            dockVisible = true
             sessionManager.onPlatformEntered(activePlatform)
             while (true) {
                 delay(1000L)
                 sessionManager.onForegroundSecondTick(activePlatform)
             }
         } else {
-            dockVisible = true
             sessionManager.onPlatformLeft()
         }
     }
 
-    BackHandler(enabled = customFullscreenView != null || destination != ZenDestination.DASHBOARD) {
+    BackHandler(enabled = customFullscreenView != null || destination != ZenDestination.INSTAGRAM) {
         when {
             customFullscreenView != null -> {
                 customViewCallback?.onCustomViewHidden()
@@ -264,6 +277,9 @@ fun DoomScrollApp() {
             }
             activePlatform != null && webViewPool.canGoBack(activePlatform) -> {
                 webViewPool.goBack(activePlatform)
+            }
+            destination == ZenDestination.DASHBOARD -> {
+                destination = ZenDestination.INSTAGRAM
             }
             else -> {
                 destination = ZenDestination.DASHBOARD

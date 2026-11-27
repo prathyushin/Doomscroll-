@@ -12,8 +12,8 @@ android {
         applicationId = "com.prathyushin.doomscroll"
         minSdk = 26
         targetSdk = 35
-        versionCode = 9
-        versionName = "2.1.2 Zen"
+        versionCode = 10
+        versionName = "2.1.3 Zen"
     }
 
     buildFeatures { compose = true }

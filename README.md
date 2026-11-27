@@ -4,10 +4,10 @@
 
 Doom Scroll combines Instagram and Threads into a single lightweight Android app built with Kotlin and Jetpack Compose. Instead of cutting you off from social media, it preserves useful social connections—DMs, Stories, profiles, posts, comments, likes, and replies—while reducing addictive scrolling, algorithmic recommendations, and mindless consumption.
 
-## Latest Release — `v2.1.2` (Zen)
+## Latest Release — `v2.1.3` (Zen)
 
-- **[Download Doom Scroll v2.1.2 APK](https://github.com/prathyushin/Doomscroll-/releases/download/v2.1.2/app-debug.apk)**
-- [View v2.1.2 Release Notes](https://github.com/prathyushin/Doomscroll-/releases/tag/v2.1.2)
+- **[Download Doom Scroll v2.1.3 APK](https://github.com/prathyushin/Doomscroll-/releases/download/v2.1.3/app-debug.apk)**
+- [View v2.1.3 Release Notes](https://github.com/prathyushin/Doomscroll-/releases/tag/v2.1.3)
 - [All Releases](https://github.com/prathyushin/Doomscroll-/releases)
 
 > **Direct-Install Compatibility:** This release omits system-wide Accessibility and Notification Listener manifest declarations so Google Play Protect Enhanced Fraud Protection does not block installation when sideloading the APK. All core controls—Feed Firewall, Behavioral Intervention Engine, Smart Focus Schedule, Local Story Controls, Privacy Dashboard, and Floating Glass Dock—run locally inside Doom Scroll with zero sensitive system permissions.

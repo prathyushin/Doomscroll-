@@ -55,11 +55,9 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 /**
- * Liquid-glass floating dock inspired by refractive lens capsules:
- * - Sleek obsidian pill track with subtle glass rim.
- * - Active item framed by a smoothly gliding frosted glass lens with
- *   bright top/bottom specular edge highlights.
- * - Clean vector icons for Instagram, Threads, and Settings gear.
+ * Compact 2-slot liquid-glass floating dock (Instagram + Settings Gear):
+ * - Starts hidden as a minimal bottom handle while browsing Instagram.
+ * - Tapping the handle reveals the gliding refractive glass lens pill and auto-hides after 3s.
  */
 @Composable
 fun FloatingGlassDock(
@@ -74,13 +72,9 @@ fun FloatingGlassDock(
     val reducedMotion = LocalReducedMotion.current
     val animDuration = if (reducedMotion) 0 else 220
 
-    val activeIndex = when (currentDestination) {
-        ZenDestination.INSTAGRAM -> 0
-        ZenDestination.THREADS -> 1
-        else -> 2
-    }
+    val activeIndex = if (currentDestination == ZenDestination.INSTAGRAM) 0 else 1
 
-    val itemWidth = 92.dp
+    val itemWidth = 108.dp
     val trackPadding = 6.dp
     val targetOffset = itemWidth * activeIndex
 
@@ -107,14 +101,13 @@ fun FloatingGlassDock(
             exit = slideOutVertically(tween(animDuration)) { it / 2 } + fadeOut(tween(animDuration))
         ) {
             Box(
-                modifier = Modifier
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
                 contentAlignment = Alignment.CenterStart
             ) {
                 // Dark obsidian pill track
                 Box(
                     modifier = Modifier
-                        .width(itemWidth * 3 + trackPadding * 2)
+                        .width(itemWidth * 2 + trackPadding * 2)
                         .height(62.dp)
                         .clip(RoundedCornerShape(31.dp))
                         .background(
@@ -172,7 +165,7 @@ fun FloatingGlassDock(
                         )
                 )
 
-                // Dock items row
+                // Dock items row (Instagram + Settings Gear)
                 Row(
                     modifier = Modifier
                         .padding(horizontal = trackPadding)
@@ -181,7 +174,11 @@ fun FloatingGlassDock(
                 ) {
                     DockSlot(
                         width = itemWidth,
-                        label = "Instagram",
+                        label = if (!sessionMinutesLabel.isNullOrBlank() && activeIndex == 0) {
+                            "Instagram • $sessionMinutesLabel"
+                        } else {
+                            "Instagram"
+                        },
                         selected = activeIndex == 0,
                         onClick = { onSelectDestination(ZenDestination.INSTAGRAM) }
                     ) { tint ->
@@ -190,17 +187,8 @@ fun FloatingGlassDock(
 
                     DockSlot(
                         width = itemWidth,
-                        label = "Threads",
+                        label = "Settings",
                         selected = activeIndex == 1,
-                        onClick = { onSelectDestination(ZenDestination.THREADS) }
-                    ) { tint ->
-                        ThreadsGlyph(tint = tint, modifier = Modifier.size(20.dp))
-                    }
-
-                    DockSlot(
-                        width = itemWidth,
-                        label = if (!sessionMinutesLabel.isNullOrBlank()) sessionMinutesLabel else "Settings",
-                        selected = activeIndex == 2,
                         showFocusDot = focusActive,
                         onClick = { onSelectDestination(ZenDestination.DASHBOARD) }
                     ) { tint ->
@@ -219,16 +207,16 @@ fun FloatingGlassDock(
             Box(
                 modifier = Modifier
                     .padding(bottom = 10.dp)
-                    .defaultMinSize(minWidth = 72.dp, minHeight = 24.dp)
+                    .defaultMinSize(minWidth = 76.dp, minHeight = 26.dp)
                     .clip(CircleShape)
                     .background(Color(0xCC111318))
                     .border(
                         1.dp,
                         Brush.horizontalGradient(
                             listOf(
-                                Color.White.copy(alpha = 0.25f),
-                                ZenColors.Mint.copy(alpha = 0.35f),
-                                Color.White.copy(alpha = 0.25f)
+                                Color.White.copy(alpha = 0.26f),
+                                ZenColors.Mint.copy(alpha = 0.38f),
+                                Color.White.copy(alpha = 0.26f)
                             )
                         ),
                         CircleShape
@@ -240,10 +228,10 @@ fun FloatingGlassDock(
             ) {
                 Box(
                     modifier = Modifier
-                        .width(28.dp)
+                        .width(30.dp)
                         .height(3.dp)
                         .clip(CircleShape)
-                        .background(ZenColors.Mint.copy(alpha = 0.78f))
+                        .background(ZenColors.Mint.copy(alpha = 0.80f))
                 )
             }
         }
@@ -327,39 +315,6 @@ private fun InstagramGlyph(tint: Color, modifier: Modifier = Modifier) {
             color = tint,
             radius = stroke * 0.75f,
             center = Offset(size.width * 0.73f, size.height * 0.27f)
-        )
-    }
-}
-
-@Composable
-private fun ThreadsGlyph(tint: Color, modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier) {
-        val center = Offset(size.width / 2f, size.height / 2f)
-        val stroke = size.minDimension * 0.11f
-        val outerR = size.minDimension * 0.39f
-        val innerR = size.minDimension * 0.17f
-
-        drawArc(
-            color = tint,
-            startAngle = 35f,
-            sweepAngle = 290f,
-            useCenter = false,
-            topLeft = Offset(center.x - outerR, center.y - outerR),
-            size = Size(outerR * 2, outerR * 2),
-            style = Stroke(width = stroke, cap = StrokeCap.Round)
-        )
-        drawCircle(
-            color = tint,
-            radius = innerR,
-            center = center,
-            style = Stroke(width = stroke)
-        )
-        drawLine(
-            color = tint,
-            start = Offset(center.x + innerR, center.y - innerR * 0.2f),
-            end = Offset(center.x + innerR, center.y + outerR * 0.55f),
-            strokeWidth = stroke,
-            cap = StrokeCap.Round
         )
     }
 }
