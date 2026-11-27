@@ -66,6 +66,7 @@ import com.prathyushin.doomscroll.ui.screens.NotificationFilterScreen
 import com.prathyushin.doomscroll.ui.screens.PrivacyDashboardScreen
 import com.prathyushin.doomscroll.ui.screens.StoryControlsScreen
 import com.prathyushin.doomscroll.ui.screens.ZenDashboardScreen
+import com.prathyushin.doomscroll.ui.theme.ZenAmbientBackdrop
 import com.prathyushin.doomscroll.ui.theme.ZenColors
 import com.prathyushin.doomscroll.ui.theme.ZenGlassCard
 import com.prathyushin.doomscroll.ui.theme.ZenTheme
@@ -286,6 +287,7 @@ fun DoomScrollApp() {
                     onRetry = { webViewPool.reload(activePlatform) }
                 )
             } else {
+                ZenAmbientBackdrop {
                 when (destination) {
                     ZenDestination.DASHBOARD -> ZenDashboardScreen(
                         config = behavioralConfig,
@@ -339,6 +341,7 @@ fun DoomScrollApp() {
                     )
                     ZenDestination.INSTAGRAM,
                     ZenDestination.THREADS -> Unit
+                }
                 }
             }
 

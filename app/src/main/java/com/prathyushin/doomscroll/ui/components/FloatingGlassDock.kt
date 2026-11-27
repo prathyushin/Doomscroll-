@@ -1,6 +1,9 @@
 package com.prathyushin.doomscroll.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -11,13 +14,15 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -26,10 +31,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -44,6 +54,13 @@ import com.prathyushin.doomscroll.ui.theme.ZenColors
 import kotlin.math.cos
 import kotlin.math.sin
 
+/**
+ * Liquid-glass floating dock inspired by refractive lens capsules:
+ * - Sleek obsidian pill track with subtle glass rim.
+ * - Active item framed by a smoothly gliding frosted glass lens with
+ *   bright top/bottom specular edge highlights.
+ * - Clean vector icons for Instagram, Threads, and Settings gear.
+ */
 @Composable
 fun FloatingGlassDock(
     currentDestination: ZenDestination,
@@ -57,8 +74,28 @@ fun FloatingGlassDock(
     val reducedMotion = LocalReducedMotion.current
     val animDuration = if (reducedMotion) 0 else 220
 
-    val settingsSelected = currentDestination != ZenDestination.INSTAGRAM &&
-        currentDestination != ZenDestination.THREADS
+    val activeIndex = when (currentDestination) {
+        ZenDestination.INSTAGRAM -> 0
+        ZenDestination.THREADS -> 1
+        else -> 2
+    }
+
+    val itemWidth = 92.dp
+    val trackPadding = 6.dp
+    val targetOffset = itemWidth * activeIndex
+
+    val lensOffset by animateDpAsState(
+        targetValue = targetOffset,
+        animationSpec = if (reducedMotion) {
+            tween(0)
+        } else {
+            spring(
+                dampingRatio = Spring.DampingRatioLowBouncy,
+                stiffness = Spring.StiffnessMediumLow
+            )
+        },
+        label = "dockLensOffset"
+    )
 
     Box(
         modifier = modifier.navigationBarsPadding(),
@@ -69,43 +106,111 @@ fun FloatingGlassDock(
             enter = slideInVertically(tween(animDuration)) { it / 2 } + fadeIn(tween(animDuration)),
             exit = slideOutVertically(tween(animDuration)) { it / 2 } + fadeOut(tween(animDuration))
         ) {
-            Row(
+            Box(
                 modifier = Modifier
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
-                    .clip(RoundedCornerShape(30.dp))
-                    .background(ZenColors.GlassSurface)
-                    .border(BorderStroke(1.dp, ZenColors.GlassBorder), RoundedCornerShape(30.dp))
-                    .padding(horizontal = 8.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                contentAlignment = Alignment.CenterStart
             ) {
-                DockItem(
-                    label = "Instagram",
-                    selected = currentDestination == ZenDestination.INSTAGRAM,
-                    onClick = { onSelectDestination(ZenDestination.INSTAGRAM) }
+                // Dark obsidian pill track
+                Box(
+                    modifier = Modifier
+                        .width(itemWidth * 3 + trackPadding * 2)
+                        .height(62.dp)
+                        .clip(RoundedCornerShape(31.dp))
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    Color(0xEB121418),
+                                    Color(0xF508090C)
+                                )
+                            )
+                        )
+                        .border(
+                            BorderStroke(
+                                1.dp,
+                                Brush.linearGradient(
+                                    colors = listOf(
+                                        Color.White.copy(alpha = 0.24f),
+                                        Color.White.copy(alpha = 0.06f),
+                                        Color.White.copy(alpha = 0.16f)
+                                    )
+                                )
+                            ),
+                            RoundedCornerShape(31.dp)
+                        )
                 )
-                DockItem(
-                    label = "Threads",
-                    selected = currentDestination == ZenDestination.THREADS,
-                    onClick = { onSelectDestination(ZenDestination.THREADS) }
+
+                // Gliding refractive liquid-glass lens around the active item
+                Box(
+                    modifier = Modifier
+                        .padding(start = trackPadding)
+                        .offset(x = lensOffset)
+                        .width(itemWidth)
+                        .height(54.dp)
+                        .clip(RoundedCornerShape(27.dp))
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.White.copy(alpha = 0.22f),
+                                    Color.White.copy(alpha = 0.07f),
+                                    ZenColors.Mint.copy(alpha = 0.14f)
+                                )
+                            )
+                        )
+                        .border(
+                            BorderStroke(
+                                1.25.dp,
+                                Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color.White.copy(alpha = 0.65f),
+                                        Color.White.copy(alpha = 0.10f),
+                                        ZenColors.Mint.copy(alpha = 0.55f)
+                                    )
+                                )
+                            ),
+                            RoundedCornerShape(27.dp)
+                        )
                 )
-                SettingsGearDockButton(
-                    selected = settingsSelected,
-                    focusActive = focusActive,
-                    onClick = { onSelectDestination(ZenDestination.DASHBOARD) }
-                )
-                if (!sessionMinutesLabel.isNullOrBlank()) {
-                    Spacer(Modifier.width(2.dp))
-                    Text(
-                        text = sessionMinutesLabel,
-                        color = ZenColors.TextMuted,
-                        style = MaterialTheme.typography.labelSmall,
-                        modifier = Modifier.padding(end = 8.dp)
-                    )
+
+                // Dock items row
+                Row(
+                    modifier = Modifier
+                        .padding(horizontal = trackPadding)
+                        .height(62.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    DockSlot(
+                        width = itemWidth,
+                        label = "Instagram",
+                        selected = activeIndex == 0,
+                        onClick = { onSelectDestination(ZenDestination.INSTAGRAM) }
+                    ) { tint ->
+                        InstagramGlyph(tint = tint, modifier = Modifier.size(20.dp))
+                    }
+
+                    DockSlot(
+                        width = itemWidth,
+                        label = "Threads",
+                        selected = activeIndex == 1,
+                        onClick = { onSelectDestination(ZenDestination.THREADS) }
+                    ) { tint ->
+                        ThreadsGlyph(tint = tint, modifier = Modifier.size(20.dp))
+                    }
+
+                    DockSlot(
+                        width = itemWidth,
+                        label = if (!sessionMinutesLabel.isNullOrBlank()) sessionMinutesLabel else "Settings",
+                        selected = activeIndex == 2,
+                        showFocusDot = focusActive,
+                        onClick = { onSelectDestination(ZenDestination.DASHBOARD) }
+                    ) { tint ->
+                        SettingsGearGlyph(tint = tint, modifier = Modifier.size(20.dp))
+                    }
                 }
             }
         }
 
+        // Minimal frosted bottom handle when tucked away
         AnimatedVisibility(
             visible = !visible,
             enter = fadeIn(tween(animDuration)),
@@ -114,21 +219,31 @@ fun FloatingGlassDock(
             Box(
                 modifier = Modifier
                     .padding(bottom = 10.dp)
-                    .defaultMinSize(minWidth = 68.dp, minHeight = 24.dp)
+                    .defaultMinSize(minWidth = 72.dp, minHeight = 24.dp)
                     .clip(CircleShape)
-                    .background(ZenColors.GlassSurface.copy(alpha = 0.72f))
-                    .border(1.dp, ZenColors.GlassBorder, CircleShape)
+                    .background(Color(0xCC111318))
+                    .border(
+                        1.dp,
+                        Brush.horizontalGradient(
+                            listOf(
+                                Color.White.copy(alpha = 0.25f),
+                                ZenColors.Mint.copy(alpha = 0.35f),
+                                Color.White.copy(alpha = 0.25f)
+                            )
+                        ),
+                        CircleShape
+                    )
                     .clickable(role = Role.Button, onClick = onRevealDock)
                     .semantics { contentDescription = "Show navigation dock" }
-                    .padding(horizontal = 16.dp, vertical = 5.dp),
+                    .padding(horizontal = 18.dp, vertical = 6.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Box(
                     modifier = Modifier
-                        .width(26.dp)
+                        .width(28.dp)
                         .height(3.dp)
                         .clip(CircleShape)
-                        .background(ZenColors.Mint.copy(alpha = 0.65f))
+                        .background(ZenColors.Mint.copy(alpha = 0.78f))
                 )
             }
         }
@@ -136,91 +251,147 @@ fun FloatingGlassDock(
 }
 
 @Composable
-private fun DockItem(
+private fun DockSlot(
+    width: androidx.compose.ui.unit.Dp,
     label: String,
     selected: Boolean,
-    onClick: () -> Unit
+    showFocusDot: Boolean = false,
+    onClick: () -> Unit,
+    icon: @Composable (Color) -> Unit
 ) {
-    val bgColor = if (selected) ZenColors.Mint else Color.Transparent
-    val textColor = if (selected) ZenColors.Charcoal else ZenColors.TextPrimary
+    val tint = if (selected) Color.White else Color.White.copy(alpha = 0.45f)
+    val interactionSource = remember { MutableInteractionSource() }
 
-    Row(
+    Box(
         modifier = Modifier
-            .defaultMinSize(minHeight = 46.dp)
-            .clip(RoundedCornerShape(23.dp))
-            .background(bgColor)
-            .clickable(role = Role.Tab, onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .width(width)
+            .height(56.dp)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                role = Role.Tab,
+                onClick = onClick
+            )
+            .semantics { contentDescription = label },
+        contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = label,
-            color = textColor,
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Box {
+                icon(tint)
+                if (showFocusDot) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .offset(x = 4.dp, y = (-2).dp)
+                            .size(6.dp)
+                            .clip(CircleShape)
+                            .background(ZenColors.Mint)
+                    )
+                }
+            }
+            if (selected) {
+                Text(
+                    text = label,
+                    color = Color.White,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun InstagramGlyph(tint: Color, modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier) {
+        val stroke = size.minDimension * 0.11f
+        val pad = stroke
+        drawRoundRect(
+            color = tint,
+            topLeft = Offset(pad, pad),
+            size = Size(size.width - pad * 2, size.height - pad * 2),
+            cornerRadius = CornerRadius(size.minDimension * 0.28f),
+            style = Stroke(width = stroke)
+        )
+        drawCircle(
+            color = tint,
+            radius = size.minDimension * 0.21f,
+            center = Offset(size.width / 2f, size.height / 2f),
+            style = Stroke(width = stroke)
+        )
+        drawCircle(
+            color = tint,
+            radius = stroke * 0.75f,
+            center = Offset(size.width * 0.73f, size.height * 0.27f)
         )
     }
 }
 
 @Composable
-private fun SettingsGearDockButton(
-    selected: Boolean,
-    focusActive: Boolean,
-    onClick: () -> Unit
-) {
-    val bgColor = if (selected) ZenColors.Mint else Color.Transparent
-    val iconColor = if (selected) ZenColors.Charcoal else ZenColors.TextPrimary
+private fun ThreadsGlyph(tint: Color, modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier) {
+        val center = Offset(size.width / 2f, size.height / 2f)
+        val stroke = size.minDimension * 0.11f
+        val outerR = size.minDimension * 0.39f
+        val innerR = size.minDimension * 0.17f
 
-    Box(
-        modifier = Modifier
-            .size(46.dp)
-            .clip(CircleShape)
-            .background(bgColor)
-            .clickable(role = Role.Tab, onClick = onClick)
-            .semantics { contentDescription = "Settings" },
-        contentAlignment = Alignment.Center
-    ) {
-        Canvas(modifier = Modifier.size(20.dp)) {
-            val center = Offset(size.width / 2f, size.height / 2f)
-            val outerR = size.minDimension * 0.44f
-            val innerR = size.minDimension * 0.28f
-            val stroke = size.minDimension * 0.11f
+        drawArc(
+            color = tint,
+            startAngle = 35f,
+            sweepAngle = 290f,
+            useCenter = false,
+            topLeft = Offset(center.x - outerR, center.y - outerR),
+            size = Size(outerR * 2, outerR * 2),
+            style = Stroke(width = stroke, cap = StrokeCap.Round)
+        )
+        drawCircle(
+            color = tint,
+            radius = innerR,
+            center = center,
+            style = Stroke(width = stroke)
+        )
+        drawLine(
+            color = tint,
+            start = Offset(center.x + innerR, center.y - innerR * 0.2f),
+            end = Offset(center.x + innerR, center.y + outerR * 0.55f),
+            strokeWidth = stroke,
+            cap = StrokeCap.Round
+        )
+    }
+}
 
-            // Center ring
-            drawCircle(
-                color = iconColor,
-                radius = innerR,
-                center = center,
-                style = Stroke(width = stroke)
-            )
-            // 8 clean gear teeth
-            for (i in 0 until 8) {
-                val angle = Math.toRadians(i * 45.0)
-                val start = Offset(
+@Composable
+private fun SettingsGearGlyph(tint: Color, modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier) {
+        val center = Offset(size.width / 2f, size.height / 2f)
+        val outerR = size.minDimension * 0.44f
+        val innerR = size.minDimension * 0.26f
+        val stroke = size.minDimension * 0.11f
+
+        drawCircle(
+            color = tint,
+            radius = innerR,
+            center = center,
+            style = Stroke(width = stroke)
+        )
+        for (i in 0 until 8) {
+            val angle = Math.toRadians(i * 45.0)
+            drawLine(
+                color = tint,
+                start = Offset(
                     center.x + (innerR * 1.15f * cos(angle)).toFloat(),
                     center.y + (innerR * 1.15f * sin(angle)).toFloat()
-                )
-                val end = Offset(
+                ),
+                end = Offset(
                     center.x + (outerR * cos(angle)).toFloat(),
                     center.y + (outerR * sin(angle)).toFloat()
-                )
-                drawLine(
-                    color = iconColor,
-                    start = start,
-                    end = end,
-                    strokeWidth = stroke,
-                    cap = StrokeCap.Round
-                )
-            }
-        }
-        if (focusActive && !selected) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(top = 8.dp, end = 8.dp)
-                    .size(7.dp)
-                    .clip(CircleShape)
-                    .background(ZenColors.Mint)
+                ),
+                strokeWidth = stroke,
+                cap = StrokeCap.Round
             )
         }
     }
