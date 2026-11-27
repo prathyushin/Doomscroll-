@@ -1,42 +1,68 @@
 # Doom Scroll
 
-**A calmer, privacy-first way to use Instagram and Threads on Android.**
+Instagram without the Reels rabbit hole.
 
-Doom Scroll combines Instagram and Threads into a single lightweight Android app built with Kotlin and Jetpack Compose. Instead of cutting you off from social media, it preserves useful social connections—DMs, Stories, profiles, posts, comments, likes, and replies—while reducing addictive scrolling, algorithmic recommendations, and mindless consumption.
+We built Doom Scroll because deleting Instagram completely isn't always realistic. Friends still text on DMs, share Stories, and send posts. The real problem is opening the app to reply to one message and losing an hour to endless Reels and algorithmic feeds.
 
-## Latest Release — `v2.1.3` (Zen)
+Doom Scroll wraps Instagram in a lightweight, dark Android shell that keeps the parts you actually use—DMs, Stories, profiles, posts, and Search—while stripping out the Reels feed and nudging you to pause when a session drags on.
 
-- **[Download Doom Scroll v2.1.3 APK](https://github.com/prathyushin/Doomscroll-/releases/download/v2.1.3/app-debug.apk)**
-- [View v2.1.3 Release Notes](https://github.com/prathyushin/Doomscroll-/releases/tag/v2.1.3)
-- [All Releases](https://github.com/prathyushin/Doomscroll-/releases)
+---
 
-> **Direct-Install Compatibility:** This release omits system-wide Accessibility and Notification Listener manifest declarations so Google Play Protect Enhanced Fraud Protection does not block installation when sideloading the APK. All core controls—Feed Firewall, Behavioral Intervention Engine, Smart Focus Schedule, Local Story Controls, Privacy Dashboard, and Floating Glass Dock—run locally inside Doom Scroll with zero sensitive system permissions.
+### Download
 
-## Key Features
+**Latest release: `v2.1.3` (Zen)**
 
-- **Instagram & Threads in One Controlled App:** Persistent WebViews for both platforms with shared Meta cookie persistence, instant tab switching without unnecessary reloads, fullscreen media support, file/media picker integration, and automatic renderer crash recovery.
-- **Instagram Feed Firewall:** Preserves posts, Stories, profiles, DMs, comments, and likes while blocking the Reels feed and suggested recommendation cards while keeping Search & Explore accessible for finding accounts and topics. Allows viewing a single Reel intentionally opened from DMs while preventing endless next-Reel consumption.
-- **Threads Integration:** Full Threads environment with redirect-loop protection, Following-tab preference, and session controls.
-- **Behavioral Intervention Engine:** Centralized state-driven policy engine (`IDLE → ACTIVE → GENTLE_PAUSE → COOLDOWN`) with configurable session limits, scroll and reopen detection, calm non-punitive pause prompts, cooldowns, and session recovery.
-- **Smart Focus Schedule:** Custom start/end times, weekday rules, overnight wrap-around handling, live timezone and system-clock change awareness, and strict Reels blocking during active focus windows.
-- **Local Story Controls:** Mute or unmute individual Story accounts locally (via long-press or the Story Controls screen) without changing your Instagram account settings.
-- **Zen Dark Interface & Floating Glass Dock:** Charcoal (`#101114`), soft panels (`#1B1A1F`), mint accent (`#B8F2D0`), liquid-glass surfaces, context-aware auto-hiding dock, reduced-motion & accessibility support, and a two-color Zen Enso Aperture icon.
-- **Privacy Dashboard & Just-in-Time Permissions:** Full local transparency over permissions, on-device usage totals, and one-tap data deletion. Camera and microphone permissions are requested only when you initiate capture on a trusted Instagram or Threads page.
+- [**Download Doom Scroll v2.1.3 APK**](https://github.com/prathyushin/Doomscroll-/releases/download/v2.1.3/app-debug.apk)
+- [Release notes (`v2.1.3`)](https://github.com/prathyushin/Doomscroll-/releases/tag/v2.1.3)
+- [All releases](https://github.com/prathyushin/Doomscroll-/releases)
 
-## Privacy & Security
+> **Installing on Android:** Download the APK and open it to install. If Android asks to allow installs from your browser or file manager, grant it for that app. We intentionally keep sensitive system permissions (like Accessibility and Notification Listener) out of direct-install builds so Google Play Protect doesn't block you from installing it.
 
-- **No Doom Scroll account** and no cloud sync.
-- **No analytics, telemetry, or advertising profiles.**
-- **No storage of DM content** or Meta passwords—authentication happens directly on Meta's official web pages inside the WebView.
-- **Minimal permissions:** Only network access plus optional just-in-time camera, microphone, and notification permissions. WebView file/content access is disabled and mixed content is blocked.
+---
 
-## Important Limitations
+### What it does
 
-Doom Scroll is an independent WebView shell around the official Instagram and Threads websites. It is not affiliated with, endorsed by, or sponsored by Meta. Because Meta controls its website markup and authentication flows, DOM-level filters (suggested-post hiding, Story dimming, and Following-tab selection) operate on a best-effort basis and may require updates if Meta changes its web UI.
+- **Opens straight into Instagram:** No extra setup walls or annoying "why are you opening this app?" popups.
+- **No Reels feed:** The Reels tab is gone. If someone sends you a Reel in DMs—or you search for a specific video or food spot—you can watch that single video, and it stops you from endlessly swiping into the next one.
+- **Search still works:** You can search for people by username, follow or message them, and look up topics without getting pulled into a random Explore grid.
+- **Auto-hiding glass dock:** A small translucent handle sits quietly at the bottom edge. Tap it whenever you want to open Settings, and it tucks itself back away after 3 seconds.
+- **Gentle session pauses:** Set a comfortable session limit and cooldown in Settings. When you cross it, Doom Scroll offers a calm pause instead of locking you out.
+- **Focus schedules:** Set work hours or overnight wind-down windows (including midnight wrap-around) with stricter Reels blocking and shorter limits.
+- **Local Story muting:** Long-press a Story tile (or add a username in Story Controls) to dim it locally inside Doom Scroll without touching your actual Instagram account settings.
 
-## Build Locally
+---
 
-Requirements: **Android SDK 35**, **JDK 17**, and **Gradle 8.7**.
+### Privacy
+
+Doom Scroll is 100% local to your phone:
+
+- No Doom Scroll account.
+- No analytics, trackers, or ads.
+- No servers—your login happens directly on Instagram's official web page inside the WebView.
+- We never read or store your DMs or passwords.
+- Camera and microphone are only requested by Android when you actually try to take a photo or send a voice note.
+- You can check your local footprint and wipe your usage history or muted list anytime inside the **Privacy Dashboard**.
+
+---
+
+### From v1 to v2.1.3
+
+- **`v1.2.0` – `v1.2.1`**: Our first public test builds—rough around the edges, with WebView bugs and missing controls, which showed us what needed to be rebuilt from scratch.
+- **`v2.0.0` (Zen)**: Full ground-up rewrite in Kotlin and Jetpack Compose with a state-driven pause engine, Focus Schedules, local Story muting, Privacy Dashboard, and a new minimal charcoal-and-mint icon.
+- **`v2.0.1`**: Restored intentional Search/Explore (so you can find accounts and search topics), fixed Play Protect sideload blocking, and simplified the app name to **Doom Scroll**.
+- **`v2.1.2` – `v2.1.3`**: Redesigned Settings and the floating dock with frosted liquid-glass surfaces, made the app launch straight into Instagram, added a 3-second auto-hiding 2-slot dock, and temporarily removed Threads to keep the core Instagram experience rock-solid.
+
+---
+
+### Good to know
+
+Doom Scroll is an independent Android WebView app built around Instagram's official mobile website. It is not affiliated with or endorsed by Meta. Because Meta updates its web markup from time to time, feed and DOM filters work on a best-effort basis and get updated when things shift.
+
+---
+
+### Build it yourself
+
+You'll need **JDK 17**, **Android SDK 35**, and **Gradle 8.7**:
 
 ```bash
 git clone https://github.com/prathyushin/Doomscroll-.git
@@ -44,10 +70,8 @@ cd Doomscroll-
 gradle testDebugUnitTest assembleDebug
 ```
 
-The installable APK is generated at `app/build/outputs/apk/debug/app-debug.apk`.
+The APK will be at `app/build/outputs/apk/debug/app-debug.apk`.
 
-## Credits
+---
 
 Built by **Pranav** and **Prathyush**.
-
-*Instagram, Threads, and Meta are trademarks of their respective owners.*
