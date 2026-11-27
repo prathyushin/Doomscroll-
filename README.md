@@ -12,7 +12,7 @@ Doom Scroll wraps Instagram in a lightweight, dark Android shell that keeps the 
 
 **Latest release: `v2.1.3` (Zen)**
 
-- [**Download Doom Scroll v2.1.3 APK**](https://github.com/prathyushin/Doomscroll-/releases/download/v2.1.3/app-debug.apk)
+- [**Download Doom Scroll v2.1.3 APK**](https://github.com/prathyushin/Doomscroll-/releases/download/v2.1.3/DoomScroll-v2.1.3.apk)
 - [Release notes (`v2.1.3`)](https://github.com/prathyushin/Doomscroll-/releases/tag/v2.1.3)
 - [All releases](https://github.com/prathyushin/Doomscroll-/releases)
 
@@ -70,8 +70,10 @@ cd Doomscroll-
 gradle testDebugUnitTest assembleDebug
 ```
 
-The APK will be at `app/build/outputs/apk/debug/app-debug.apk`.
+The APK will be at `app/build/outputs/apk/debug/app-debug.apk` (published releases are named `DoomScroll-<version>.apk`).
 
 ---
+
+Licensed under the [MIT License](LICENSE).
 
 Built by **Pranav** and **Prathyush**.
