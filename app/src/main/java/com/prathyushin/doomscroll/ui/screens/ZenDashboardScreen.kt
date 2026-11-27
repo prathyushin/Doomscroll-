@@ -90,7 +90,7 @@ fun ZenDashboardScreen(
                                 .padding(horizontal = 8.dp, vertical = 2.dp)
                         ) {
                             Text(
-                                text = "v2.0.1",
+                                text = "v2.1.2",
                                 color = ZenColors.Mint,
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.SemiBold
@@ -305,7 +305,7 @@ fun ZenDashboardScreen(
             )
             ZenGlassPillRow(
                 title = "About Doom Scroll",
-                subtitle = "v2.0.1 Zen • Built by Pranav and Prathyush",
+                subtitle = "v2.1.2 Zen • Built by Pranav and Prathyush",
                 badgeGlyph = "✦",
                 onClick = { onNavigate(ZenDestination.ABOUT) }
             )
